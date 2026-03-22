@@ -38,6 +38,11 @@ model Vendor {
 
   templateId      String   @default("classic")
 
+  // Map settings
+  mapPreset       String   @default("light") // light | dark | branded
+  mapVisible      Boolean  @default(true)
+  mapDefaultZoom  Int      @default(12)
+
   customDomain    String?  @unique
   domainStatus    String?  // pending, verified, active
 

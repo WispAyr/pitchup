@@ -65,6 +65,9 @@ export async function PATCH(
       'preOrderingEnabled',
       'templateId',
       'customDomain',
+      'mapPreset',
+      'mapVisible',
+      'mapDefaultZoom',
     ] as const
 
     const updateData: Record<string, any> = {}
@@ -125,6 +128,9 @@ export async function PATCH(
         templateId: true,
         customDomain: true,
         domainStatus: true,
+        mapPreset: true,
+        mapVisible: true,
+        mapDefaultZoom: true,
       },
     })
 

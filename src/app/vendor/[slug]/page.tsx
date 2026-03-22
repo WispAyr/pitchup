@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { formatPrice } from '@/lib/utils'
 import { MapPin, Clock, ArrowRight, ExternalLink } from 'lucide-react'
 import { VendorHomeClient } from './page-client'
+import { VendorMapSection } from './vendor-map-section'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -28,6 +29,17 @@ export default async function VendorHomePage({
       schedules: {
         include: { location: true },
         orderBy: { dayOfWeek: 'asc' },
+      },
+      locations: {
+        include: {
+          schedules: {
+            orderBy: { dayOfWeek: 'asc' },
+          },
+          liveSessions: {
+            where: { endedAt: null },
+            take: 1,
+          },
+        },
       },
     },
   })
@@ -83,6 +95,9 @@ export default async function VendorHomePage({
           </div>
         </div>
       </section>
+
+      {/* Map */}
+      <VendorMapSection vendor={vendor} />
 
       {/* Live status banner */}
       {activeSession && (

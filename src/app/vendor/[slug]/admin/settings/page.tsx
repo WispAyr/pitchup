@@ -50,6 +50,9 @@ export default function SettingsPage() {
     preOrderingEnabled: true,
     templateId: 'classic',
     customDomain: '',
+    mapPreset: 'light',
+    mapVisible: true,
+    mapDefaultZoom: 12,
   })
   const [domainStatus, setDomainStatus] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
@@ -87,6 +90,9 @@ export default function SettingsPage() {
         preOrderingEnabled: data.preOrderingEnabled ?? true,
         templateId: data.templateId || 'classic',
         customDomain: data.customDomain || '',
+        mapPreset: data.mapPreset || 'light',
+        mapVisible: data.mapVisible ?? true,
+        mapDefaultZoom: data.mapDefaultZoom || 12,
       })
       setDomainStatus(data.domainStatus || null)
     } catch (err: any) {
@@ -130,6 +136,9 @@ export default function SettingsPage() {
           preOrderingEnabled: form.preOrderingEnabled,
           templateId: form.templateId,
           customDomain: form.customDomain.trim() || null,
+          mapPreset: form.mapPreset,
+          mapVisible: form.mapVisible,
+          mapDefaultZoom: form.mapDefaultZoom,
         }),
       })
       if (!res.ok) {
@@ -442,6 +451,84 @@ export default function SettingsPage() {
               </a>
             </div>
           )}
+        </div>
+
+        {/* Map Settings */}
+        <div className="rounded-xl bg-white border border-gray-100 shadow-sm p-5">
+          <h2 className="mb-4 text-lg font-bold text-gray-900">Map Settings</h2>
+
+          <div className="space-y-4">
+            {/* Show/hide toggle */}
+            <label className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Show map on your page</span>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, mapVisible: !form.mapVisible })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  form.mapVisible ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    form.mapVisible ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </label>
+
+            {/* Style presets */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Map Style</label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: 'light', label: 'Light', bg: 'bg-gray-50', border: 'border-gray-200' },
+                  { id: 'dark', label: 'Dark', bg: 'bg-gray-900', border: 'border-gray-700' },
+                  { id: 'branded', label: 'Branded', bg: '', border: '' },
+                ].map((style) => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, mapPreset: style.id })}
+                    className={`relative rounded-xl border-2 p-3 text-center text-sm font-medium transition-all ${
+                      form.mapPreset === style.id
+                        ? 'border-amber-500 ring-2 ring-amber-200'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div
+                      className={`mx-auto mb-2 h-8 w-full rounded-lg ${style.bg}`}
+                      style={
+                        style.id === 'branded'
+                          ? { background: `linear-gradient(135deg, ${form.primaryColor}20, ${form.primaryColor}40)` }
+                          : undefined
+                      }
+                    />
+                    <span className={style.id === 'dark' ? 'text-gray-700' : 'text-gray-900'}>
+                      {style.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Default zoom */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Default Zoom Level</label>
+              <input
+                type="range"
+                min={8}
+                max={16}
+                value={form.mapDefaultZoom}
+                onChange={(e) => setForm({ ...form, mapDefaultZoom: parseInt(e.target.value) })}
+                className="w-full accent-amber-500"
+              />
+              <div className="flex justify-between text-xs text-gray-400">
+                <span>Wide area</span>
+                <span>Zoom {form.mapDefaultZoom}</span>
+                <span>Close up</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Custom Domain */}
