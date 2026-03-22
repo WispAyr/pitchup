@@ -1,455 +1,125 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { formatPrice } from '@/lib/utils'
-import {
-  Clock,
-  ChefHat,
-  Package,
-  CheckCircle,
-  Banknote,
-  CreditCard,
-  XCircle,
-  UserX,
-  Volume2,
-  VolumeX,
-  Maximize,
-  ArrowRight,
-} from 'lucide-react'
+import Link from 'next/link'
+import { Monitor, Radio, Truck } from 'lucide-react'
 
-type Order = {
-  id: string
-  pickupCode: string | null
-  status: string
-  customerName: string
-  customerPhone: string | null
-  items: { name: string; price: number; quantity: number }[]
-  total: number
-  timeSlotStart: string | null
-  timeSlotEnd: string | null
-  paymentMethod: string | null
-  paidAt: string | null
-  createdAt: string
-}
+type Vehicle = { id: string; name: string; status: string }
+type LiveSession = { id: string; vehicleId: string | null; location: { name: string }; startedAt: string }
 
-const NOTIFICATION_SOUND_URL = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1sbW1+kbGlkIR4dH2Ck6u0qpWJgH56h5iusrOfkIZ/fYGNoa2xppKHf31/hpOkr6+gi4J8eoCIl6qwqpSHf3t7g4yaqrKulIZ+enyCiperr6qTh357fIKLm6qyrpWHfnt8gYqaqrCulYh+e3yBipmqsK6Wh358fYGJmaqxrpaIfnx8gYqZqrGuloh+fHyBipmqsK6ViH57fIGKmaqwrpaIfnx8gYqZqrGul4h+fHyBipmqsa6Wh358fIGKmaqwr5aIfnx8gYqZqrGuloh+fH2BiZqqsa6Wh358'
-
-function useNow(intervalMs = 1000) {
-  const [now, setNow] = useState(new Date())
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), intervalMs)
-    return () => clearInterval(id)
-  }, [intervalMs])
-  return now
-}
-
-function timeSince(dateStr: string, now: Date) {
-  const diff = Math.floor((now.getTime() - new Date(dateStr).getTime()) / 1000)
-  if (diff < 60) return `${diff}s`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`
-}
-
-function formatTime(iso: string) {
-  const d = new Date(iso)
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
-}
-
-function isOverdue(order: Order, now: Date) {
-  if (!order.timeSlotEnd) return false
-  return now > new Date(order.timeSlotEnd)
-}
-
-export default function LiveKDSPage({ params }: { params: { slug: string } }) {
+export default function KDSSelectPage({ params }: { params: { slug: string } }) {
   const { data: session } = useSession()
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
-  const [soundEnabled, setSoundEnabled] = useState(true)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const prevOrderIdsRef = useRef<Set<string>>(new Set())
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const now = useNow()
-
   const vendorId = (session?.user as any)?.id
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    audioRef.current = new Audio(NOTIFICATION_SOUND_URL)
-  }, [])
-
-  const playNotification = useCallback(() => {
-    if (!soundEnabled || !audioRef.current) return
-    audioRef.current.currentTime = 0
-    audioRef.current.play().catch(() => {})
-    // Also try browser notification
-    if (Notification.permission === 'granted') {
-      new Notification('New Order!', { body: 'A new order has come in.', icon: '/favicon.ico' })
-    }
-  }, [soundEnabled])
-
-  const fetchOrders = useCallback(async () => {
     if (!vendorId) return
-    try {
-      const res = await fetch(`/api/orders?vendorId=${vendorId}`)
-      if (res.ok) {
-        const data: Order[] = await res.json()
-        // Filter to active only
-        const active = data.filter((o) =>
-          ['confirmed', 'preparing', 'ready'].includes(o.status)
-        )
+    Promise.all([
+      fetch(`/api/vendor/${params.slug}/vehicles`).then(r => r.json()),
+      fetch(`/api/live-sessions?vendorId=${vendorId}`).then(r => r.json()),
+    ]).then(([vehs, sessions]) => {
+      setVehicles(vehs.filter((v: Vehicle) => v.status === 'active'))
+      setLiveSessions(sessions.filter((s: LiveSession) => !!(s as any).startedAt && !(s as any).endedAt))
+    }).finally(() => setLoading(false))
+  }, [vendorId, params.slug])
 
-        // Check for new orders
-        const currentIds = new Set(active.filter(o => o.status === 'confirmed').map(o => o.id))
-        const prevIds = prevOrderIdsRef.current
-        const hasNew = Array.from(currentIds).some(id => !prevIds.has(id))
-        if (hasNew && prevIds.size > 0) {
-          playNotification()
-        }
-        prevOrderIdsRef.current = currentIds
-
-        setOrders(active)
-      }
-    } catch (e) {
-      console.error('KDS fetch error:', e)
-    } finally {
-      setLoading(false)
-    }
-  }, [vendorId, playNotification])
-
-  useEffect(() => {
-    fetchOrders()
-    const interval = setInterval(fetchOrders, 4000)
-    return () => clearInterval(interval)
-  }, [fetchOrders])
-
-  useEffect(() => {
-    if (Notification.permission === 'default') {
-      Notification.requestPermission()
-    }
-  }, [])
-
-  const updateStatus = async (orderId: string, status: string, extra?: Record<string, any>) => {
-    try {
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, ...extra }),
-      })
-      if (res.ok) fetchOrders()
-    } catch (e) {
-      console.error('KDS update error:', e)
-    }
+  function getSessionForVehicle(vehicleId: string) {
+    return liveSessions.find(s => s.vehicleId === vehicleId)
   }
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
-      setIsFullscreen(true)
-    } else {
-      document.exitFullscreen()
-      setIsFullscreen(false)
-    }
+  function getDuration(startedAt: string) {
+    const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
+    const h = Math.floor(diff / 3600)
+    const m = Math.floor((diff % 3600) / 60)
+    return h > 0 ? `${h}h ${m}m` : `${m}m`
   }
-
-  const incoming = orders.filter((o) => o.status === 'confirmed')
-  const preparing = orders.filter((o) => o.status === 'preparing')
-  const ready = orders.filter((o) => o.status === 'ready')
-
-  // Estimated wait: avg prep time based on preparing orders count
-  const estimatedWait = preparing.length * 5 + incoming.length * 5
 
   if (loading) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-amber-500" />
-      </div>
-    )
+    return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-gray-600" /></div>
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-gray-950 text-white select-none">
-      {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-        <div className="flex items-center gap-6">
-          <h1 className="text-lg font-black tracking-wide">🔥 KITCHEN</h1>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="rounded-full bg-blue-500/20 px-3 py-1 text-blue-300 font-bold">
-              {incoming.length} incoming
-            </span>
-            <span className="rounded-full bg-amber-500/20 px-3 py-1 text-amber-300 font-bold">
-              {preparing.length} preparing
-            </span>
-            <span className="rounded-full bg-green-500/20 px-3 py-1 text-green-300 font-bold">
-              {ready.length} ready
-            </span>
-          </div>
-          {estimatedWait > 0 && (
-            <span className="text-xs text-gray-500">
-              ~{estimatedWait}min wait
-            </span>
-          )}
+    <div>
+      <h1 className="mb-2 text-2xl font-extrabold text-gray-900">Kitchen Display</h1>
+      <p className="mb-6 text-sm text-gray-500">Select a van to open its KDS. Each van has its own order queue.</p>
+
+      {vehicles.length === 0 ? (
+        <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+          <Truck className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+          <p className="font-bold text-gray-900">No vehicles</p>
+          <p className="text-sm text-gray-500 mt-1">Add vans in Fleet Management, then go live.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="rounded-lg p-2 hover:bg-gray-800"
-            title={soundEnabled ? 'Mute notifications' : 'Enable notifications'}
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* All orders KDS */}
+          <Link
+            href={`/vendor/${params.slug}/admin/live/all`}
+            className="group rounded-2xl border-2 border-gray-200 bg-white p-5 transition-all hover:border-gray-400 hover:shadow-md active:scale-[0.98]"
           >
-            {soundEnabled ? (
-              <Volume2 className="h-5 w-5 text-green-400" />
-            ) : (
-              <VolumeX className="h-5 w-5 text-gray-500" />
-            )}
-          </button>
-          <button
-            onClick={toggleFullscreen}
-            className="rounded-lg p-2 hover:bg-gray-800"
-            title="Toggle fullscreen"
-          >
-            <Maximize className="h-5 w-5 text-gray-400" />
-          </button>
-          <a
-            href={`/vendor/${params.slug}/admin/orders`}
-            className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-700"
-          >
-            Exit KDS
-          </a>
-        </div>
-      </div>
-
-      {/* Three columns */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* INCOMING */}
-        <div className="flex flex-1 flex-col border-r border-gray-800">
-          <div className="border-b border-gray-800 bg-blue-500/10 px-4 py-3">
-            <h2 className="text-center text-sm font-black uppercase tracking-wider text-blue-400">
-              Incoming ({incoming.length})
-            </h2>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {incoming.map((order) => (
-              <KDSCard
-                key={order.id}
-                order={order}
-                now={now}
-                variant="incoming"
-                onAction={() => updateStatus(order.id, 'preparing')}
-                actionLabel="Accept & Prepare"
-                actionIcon={<ChefHat className="h-4 w-4" />}
-                onCancel={() => updateStatus(order.id, 'cancelled', { cancelReason: 'Rejected by vendor' })}
-              />
-            ))}
-            {incoming.length === 0 && (
-              <div className="flex h-32 items-center justify-center text-gray-600 text-sm">
-                No incoming orders
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-900 text-white">
+                <Monitor className="h-5 w-5" />
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* PREPARING */}
-        <div className="flex flex-1 flex-col border-r border-gray-800">
-          <div className="border-b border-gray-800 bg-amber-500/10 px-4 py-3">
-            <h2 className="text-center text-sm font-black uppercase tracking-wider text-amber-400">
-              Preparing ({preparing.length})
-            </h2>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {preparing.map((order) => (
-              <KDSCard
-                key={order.id}
-                order={order}
-                now={now}
-                variant="preparing"
-                onAction={() => updateStatus(order.id, 'ready')}
-                actionLabel="Ready"
-                actionIcon={<Package className="h-4 w-4" />}
-                onCancel={() => updateStatus(order.id, 'cancelled', { cancelReason: 'Cancelled while preparing' })}
-              />
-            ))}
-            {preparing.length === 0 && (
-              <div className="flex h-32 items-center justify-center text-gray-600 text-sm">
-                Nothing preparing
+              <div>
+                <h3 className="font-extrabold text-gray-900">All Orders</h3>
+                <span className="text-xs text-gray-400">Owner overview — all vans combined</span>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+            <div className="text-sm text-gray-500">
+              {liveSessions.length} van{liveSessions.length !== 1 ? 's' : ''} live
+            </div>
+          </Link>
 
-        {/* READY */}
-        <div className="flex flex-1 flex-col">
-          <div className="border-b border-gray-800 bg-green-500/10 px-4 py-3">
-            <h2 className="text-center text-sm font-black uppercase tracking-wider text-green-400">
-              Ready ({ready.length})
-            </h2>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {ready.map((order) => (
-              <KDSCard
-                key={order.id}
-                order={order}
-                now={now}
-                variant="ready"
-                onAction={null}
-                actionLabel=""
-                actionIcon={null}
-                onCollectCash={() => updateStatus(order.id, 'collected', { paymentMethod: 'cash' })}
-                onCollectCard={() => updateStatus(order.id, 'collected', { paymentMethod: 'card' })}
-                onNoShow={() => updateStatus(order.id, 'no-show')}
-              />
-            ))}
-            {ready.length === 0 && (
-              <div className="flex h-32 items-center justify-center text-gray-600 text-sm">
-                No orders ready
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+          {/* Per-van KDS cards */}
+          {vehicles.map((vehicle) => {
+            const session = getSessionForVehicle(vehicle.id)
+            const isLive = !!session
+            return (
+              <Link
+                key={vehicle.id}
+                href={`/vendor/${params.slug}/admin/live/${vehicle.id}`}
+                className={`group rounded-2xl border-2 p-5 transition-all hover:shadow-md active:scale-[0.98] ${
+                  isLive ? 'border-green-300 bg-green-50 hover:border-green-400' : 'border-gray-100 bg-white hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-xl ${isLive ? 'bg-green-100' : 'bg-gray-100'}`}>
+                    🚐
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-gray-900">{vehicle.name}</h3>
+                    {isLive && session ? (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                        </span>
+                        <span className="font-bold text-green-700">{session.location.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">Offline</span>
+                    )}
+                  </div>
+                </div>
 
-function KDSCard({
-  order,
-  now,
-  variant,
-  onAction,
-  actionLabel,
-  actionIcon,
-  onCancel,
-  onCollectCash,
-  onCollectCard,
-  onNoShow,
-}: {
-  order: Order
-  now: Date
-  variant: 'incoming' | 'preparing' | 'ready'
-  onAction: (() => void) | null
-  actionLabel: string
-  actionIcon: React.ReactNode
-  onCancel?: () => void
-  onCollectCash?: () => void
-  onCollectCard?: () => void
-  onNoShow?: () => void
-}) {
-  const overdue = isOverdue(order, now)
-  const isNew = variant === 'incoming' && (now.getTime() - new Date(order.createdAt).getTime()) < 30000
-
-  const borderColor =
-    overdue ? 'border-red-500' :
-    variant === 'incoming' ? 'border-blue-500/50' :
-    variant === 'preparing' ? 'border-amber-500/50' :
-    'border-green-500/50'
-
-  const bgColor =
-    overdue ? 'bg-red-950/50' :
-    variant === 'incoming' ? 'bg-gray-900' :
-    variant === 'preparing' ? 'bg-gray-900' :
-    'bg-gray-900'
-
-  return (
-    <div
-      className={`rounded-xl border-2 ${borderColor} ${bgColor} p-4 transition-all ${
-        isNew ? 'animate-pulse ring-2 ring-blue-400/50' : ''
-      } ${overdue ? 'ring-2 ring-red-500/50' : ''}`}
-    >
-      {/* Pickup code + timer */}
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className={`text-3xl font-black tracking-wider ${
-            overdue ? 'text-red-400' : 'text-white'
-          }`}
-        >
-          {order.pickupCode || '???'}
-        </div>
-        <div className="text-right">
-          <div className={`text-xs font-mono ${overdue ? 'text-red-400' : 'text-gray-500'}`}>
-            <Clock className="inline h-3 w-3 mr-1" />
-            {timeSince(order.createdAt, now)}
-          </div>
-          {overdue && (
-            <div className="text-xs font-bold text-red-400 mt-0.5">OVERDUE</div>
-          )}
-        </div>
-      </div>
-
-      {/* Customer */}
-      <div className="text-sm font-semibold text-gray-300 mb-2">{order.customerName}</div>
-
-      {/* Items */}
-      <div className="space-y-1 mb-3">
-        {(order.items as { name: string; quantity: number; price: number }[]).map((item, i) => (
-          <div key={i} className="flex justify-between text-sm">
-            <span className="text-gray-400">
-              <span className="font-bold text-gray-200">{item.quantity}×</span> {item.name}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Time slot */}
-      {order.timeSlotStart && (
-        <div className={`text-xs mb-3 ${overdue ? 'text-red-400' : 'text-gray-500'}`}>
-          Slot: {formatTime(order.timeSlotStart)}
-          {order.timeSlotEnd && ` - ${formatTime(order.timeSlotEnd)}`}
+                {isLive && session && (
+                  <div className="text-xs text-gray-500">
+                    Live for {getDuration(session.startedAt)}
+                  </div>
+                )}
+                {!isLive && (
+                  <div className="text-xs text-gray-400">
+                    No active session — go live first
+                  </div>
+                )}
+              </Link>
+            )
+          })}
         </div>
       )}
-
-      {/* Total */}
-      <div className="text-sm font-bold text-gray-300 mb-3">
-        {formatPrice(order.total)}
-      </div>
-
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2">
-        {onAction && (
-          <button
-            onClick={onAction}
-            className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-bold text-white transition-all active:scale-95 ${
-              variant === 'incoming'
-                ? 'bg-blue-600 hover:bg-blue-500'
-                : 'bg-amber-600 hover:bg-amber-500'
-            }`}
-          >
-            {actionIcon}
-            {actionLabel}
-          </button>
-        )}
-
-        {variant === 'ready' && (
-          <>
-            <button
-              onClick={onCollectCash}
-              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 py-3 text-sm font-bold text-white hover:bg-green-500 active:scale-95"
-            >
-              <Banknote className="h-4 w-4" />
-              Cash
-            </button>
-            <button
-              onClick={onCollectCard}
-              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-500 active:scale-95"
-            >
-              <CreditCard className="h-4 w-4" />
-              Card
-            </button>
-            <button
-              onClick={onNoShow}
-              className="rounded-lg bg-gray-800 px-3 py-3 text-xs font-bold text-orange-400 hover:bg-gray-700 active:scale-95"
-            >
-              <UserX className="h-4 w-4" />
-            </button>
-          </>
-        )}
-
-        {onCancel && (
-          <button
-            onClick={onCancel}
-            className="rounded-lg bg-gray-800 px-3 py-3 text-xs text-gray-500 hover:bg-gray-700 hover:text-red-400 active:scale-95"
-          >
-            <XCircle className="h-4 w-4" />
-          </button>
-        )}
-      </div>
     </div>
   )
 }

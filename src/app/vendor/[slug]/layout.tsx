@@ -18,17 +18,15 @@ export default async function VendorLayout({
     where: { slug: params.slug },
     include: {
       liveSessions: {
-        where: { endedAt: null },
-        include: { location: true },
-        take: 1,
+        where: { endedAt: null, cancelled: false },
+        include: { location: true, vehicle: true },
       },
     },
   })
 
   if (!vendor) notFound()
 
-  const activeSession = vendor.liveSessions[0] || null
-
+  const activeSessions = vendor.liveSessions
   const templateId = (vendor as any).templateId || 'classic'
 
   const vendorData: VendorData = {
@@ -50,12 +48,20 @@ export default async function VendorLayout({
     twitter: vendor.twitter,
     preOrderingEnabled: vendor.preOrderingEnabled,
     templateId,
-    isLive: !!activeSession,
-    liveLocation: activeSession
+    isLive: activeSessions.length > 0,
+    liveSessionCount: activeSessions.length,
+    liveSessions: activeSessions.map((s) => ({
+      id: s.id,
+      vehicleName: s.vehicle?.name || null,
+      locationName: s.location.name,
+      lat: s.lat,
+      lng: s.lng,
+    })),
+    liveLocation: activeSessions[0]
       ? {
-          name: activeSession.location.name,
-          lat: activeSession.lat,
-          lng: activeSession.lng,
+          name: activeSessions[0].location.name,
+          lat: activeSessions[0].lat,
+          lng: activeSessions[0].lng,
         }
       : null,
   }
@@ -63,11 +69,7 @@ export default async function VendorLayout({
   return (
     <VendorProvider vendor={vendorData}>
       <div
-        className={`flex min-h-screen flex-col ${
-          templateId === 'bold' ? 'bg-gray-950 text-white' :
-          templateId === 'minimal' ? 'bg-gray-50' :
-          'bg-white'
-        }`}
+        className="flex min-h-screen flex-col bg-white"
         style={
           {
             '--vendor-primary': vendor.primaryColor,
@@ -75,47 +77,41 @@ export default async function VendorLayout({
           } as React.CSSProperties
         }
       >
-        {/* Live banner */}
-        {vendorData.isLive && vendorData.liveLocation && (
+        {/* Live banner — shows all active vans */}
+        {activeSessions.length > 0 && (
           <LiveBanner
-            locationName={vendorData.liveLocation.name}
+            sessions={activeSessions.map((s) => ({
+              vehicleName: s.vehicle?.name || null,
+              locationName: s.location.name,
+            }))}
             primaryColor={vendor.primaryColor}
           />
         )}
 
-        {/* Header */}
-        <header className={`sticky top-0 z-30 border-b backdrop-blur-sm ${
-          templateId === 'bold'
-            ? 'border-gray-800 bg-gray-900/95'
-            : 'border-gray-100 bg-white/95'
-        }`}>
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-            <Link href="/" className="flex items-center gap-3">
+        {/* Header — sticky, compact on mobile */}
+        <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur-md">
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-2.5">
+            <Link href="/" className="flex items-center gap-2.5 min-w-0">
               {vendor.logo ? (
-                <img
-                  src={vendor.logo}
-                  alt={vendor.name}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
+                <img src={vendor.logo} alt={vendor.name} className="h-9 w-9 rounded-full object-cover shrink-0" />
               ) : (
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold text-white"
-                  style={{ backgroundColor: vendor.primaryColor }}
-                >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base font-bold text-white" style={{ backgroundColor: vendor.primaryColor }}>
                   {vendor.name.charAt(0)}
                 </div>
               )}
-              <div>
-                <h1 className={`text-lg font-bold leading-tight ${templateId === 'bold' ? 'text-white' : 'text-gray-900'}`}>
+              <div className="min-w-0">
+                <h1 className="truncate text-base font-extrabold text-gray-900 leading-tight">
                   {vendor.name}
                 </h1>
-                {vendorData.isLive && (
-                  <span className="flex items-center gap-1 text-xs font-semibold text-green-600">
-                    <span className="relative flex h-2 w-2">
+                {activeSessions.length > 0 && (
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-green-600">
+                    <span className="relative flex h-1.5 w-1.5">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500" />
                     </span>
-                    LIVE NOW
+                    {activeSessions.length === 1
+                      ? `LIVE${activeSessions[0].vehicle?.name ? ` — ${activeSessions[0].vehicle.name}` : ''}`
+                      : `${activeSessions.length} VANS LIVE`}
                   </span>
                 )}
               </div>
@@ -132,23 +128,18 @@ export default async function VendorLayout({
         <main className="flex-1">{children}</main>
 
         {/* Footer */}
-        <footer
-          className="border-t border-gray-100 px-4 py-8 text-center text-sm text-gray-400"
-          style={{ backgroundColor: vendor.secondaryColor + '10' }}
-        >
-          <p>
-            Powered by{' '}
-            <a
-              href={`${process.env.NEXT_PUBLIC_ROOT_URL || 'https://pitchup.local-connect.uk'}`}
-              className="font-semibold transition-colors hover:text-gray-600"
-              style={{ color: vendor.primaryColor }}
-            >
-              PitchUp
-            </a>
-          </p>
+        <footer className="border-t border-gray-100 px-4 py-6 text-center text-xs text-gray-400">
+          Powered by{' '}
+          <a
+            href={process.env.NEXT_PUBLIC_ROOT_URL || 'https://pitchup.local-connect.uk'}
+            className="font-bold transition-colors hover:text-gray-600"
+            style={{ color: vendor.primaryColor }}
+          >
+            PitchUp
+          </a>
         </footer>
 
-        {/* Cart drawer */}
+        {/* Cart */}
         {vendor.preOrderingEnabled && <CartDrawer />}
       </div>
     </VendorProvider>

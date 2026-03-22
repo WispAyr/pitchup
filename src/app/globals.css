@@ -6,10 +6,27 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
+    --vendor-primary: #F59E0B;
+    --vendor-secondary: #78350F;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
 
   body {
     @apply bg-white text-gray-900 antialiased;
+  }
+
+  /* Ensure minimum tap targets on mobile */
+  button, a, [role="button"], input, select, textarea {
+    min-height: 44px;
+  }
+
+  /* Exception for inline/badge elements */
+  .badge, [class*="badge"], span[class*="rounded"] {
+    min-height: auto;
   }
 }
 
@@ -17,4 +34,52 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Safe area padding for notched phones */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Scrollbar hide for horizontal scrolling nav */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Skeleton shimmer animation */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  /* Pulsing live dot */
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.5); }
+  }
+  .live-dot {
+    animation: live-pulse 2s ease-in-out infinite;
+  }
+}
+
+/* Bottom sheet transition */
+.bottom-sheet-enter {
+  transform: translateY(100%);
+}
+.bottom-sheet-enter-active {
+  transform: translateY(0);
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
 }

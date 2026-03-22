@@ -14,11 +14,14 @@ export function CartDrawer() {
   const vendor = useVendor()
   const router = useRouter()
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  useEffect(() => { setMounted(true) }, [])
 
-  // Only show for this vendor's cart
+  useEffect(() => {
+    if (open) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
   const isOurCart = cart.vendorSlug === vendor.slug
   const count = isOurCart ? cart.itemCount() : 0
 
@@ -26,88 +29,65 @@ export function CartDrawer() {
 
   return (
     <>
-      {/* Floating cart button */}
+      {/* Floating cart button — above sticky bottom bar */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full px-5 py-3 text-white shadow-lg transition-transform hover:scale-105"
+        className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full px-5 py-3 text-white shadow-xl active:scale-95 md:bottom-6 md:right-6"
         style={{ backgroundColor: vendor.primaryColor }}
       >
         <ShoppingCart className="h-5 w-5" />
-        <span className="font-bold">{count}</span>
-        <span className="text-sm font-medium">{formatPrice(cart.total())}</span>
+        <span className="font-extrabold">{count}</span>
+        <span className="text-sm font-bold">{formatPrice(cart.total())}</span>
       </button>
 
       {/* Overlay */}
       {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)} />
       )}
 
-      {/* Drawer */}
-      <div
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col bg-white shadow-2xl transition-transform duration-300 ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
+      {/* Drawer — slides up from bottom on mobile, from right on desktop */}
+      <div className={`fixed z-50 transition-transform duration-300 ease-out
+        inset-x-0 bottom-0 max-h-[85vh] rounded-t-3xl bg-white shadow-2xl
+        md:inset-y-0 md:right-0 md:left-auto md:w-96 md:max-h-full md:rounded-none
+        ${open ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:translate-y-0 md:translate-x-full'}
+      `}>
+        {/* Handle bar (mobile) */}
+        <div className="flex justify-center py-2 md:hidden">
+          <div className="h-1 w-10 rounded-full bg-gray-300" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-lg font-bold">Your Order</h2>
-          <button
-            onClick={() => setOpen(false)}
-            className="rounded-full p-2 hover:bg-gray-100"
-            aria-label="Close cart"
-          >
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <h2 className="text-lg font-extrabold">Your Order</h2>
+          <button onClick={() => setOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full active:bg-gray-100" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Items */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-5">
           {cart.items.map((item) => (
-            <div
-              key={item.menuItemId}
-              className="flex items-center justify-between border-b border-gray-50 py-3"
-            >
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                <p className="text-xs text-gray-500">
-                  {formatPrice(item.price)} each
-                </p>
+            <div key={item.menuItemId} className="flex items-center justify-between border-b border-gray-50 py-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-900">{item.name}</p>
+                <p className="text-xs text-gray-500">{formatPrice(item.price)} each</p>
               </div>
-
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <div className="flex items-center gap-1 rounded-full border border-gray-200">
-                  <button
-                    onClick={() => cart.updateQuantity(item.menuItemId, item.quantity - 1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-gray-100"
-                    aria-label="Decrease"
-                  >
-                    <Minus className="h-3 w-3" />
+                  <button onClick={() => cart.updateQuantity(item.menuItemId, item.quantity - 1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full active:bg-gray-100" aria-label="Decrease">
+                    <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="min-w-[1.25rem] text-center text-sm font-semibold">
-                    {item.quantity}
-                  </span>
-                  <button
-                    onClick={() => cart.updateQuantity(item.menuItemId, item.quantity + 1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-gray-100"
-                    aria-label="Increase"
-                  >
-                    <Plus className="h-3 w-3" />
+                  <span className="min-w-[1.5rem] text-center text-sm font-bold">{item.quantity}</span>
+                  <button onClick={() => cart.updateQuantity(item.menuItemId, item.quantity + 1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full active:bg-gray-100" aria-label="Increase">
+                    <Plus className="h-3.5 w-3.5" />
                   </button>
                 </div>
-
-                <span className="w-16 text-right text-sm font-semibold">
-                  {formatPrice(item.price * item.quantity)}
-                </span>
-
-                <button
-                  onClick={() => cart.removeItem(item.menuItemId)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-red-400 hover:bg-red-50 hover:text-red-600"
-                  aria-label="Remove"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
+                <span className="w-14 text-right text-sm font-bold">{formatPrice(item.price * item.quantity)}</span>
+                <button onClick={() => cart.removeItem(item.menuItemId)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-red-400 active:bg-red-50" aria-label="Remove">
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -115,20 +95,17 @@ export function CartDrawer() {
         </div>
 
         {/* Footer */}
-        <div className="border-t p-4">
+        <div className="border-t p-5 pb-safe">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-600">Subtotal</span>
-            <span className="text-lg font-bold">{formatPrice(cart.total())}</span>
+            <span className="font-bold text-gray-600">Subtotal</span>
+            <span className="text-xl font-extrabold">{formatPrice(cart.total())}</span>
           </div>
           <button
-            onClick={() => {
-              setOpen(false)
-              router.push('/order')
-            }}
-            className="w-full rounded-full py-3 text-sm font-bold text-white transition-transform hover:scale-[1.02]"
+            onClick={() => { setOpen(false); router.push('/order') }}
+            className="flex h-13 w-full items-center justify-center rounded-2xl text-base font-extrabold text-white active:scale-[0.98]"
             style={{ backgroundColor: vendor.primaryColor }}
           >
-            Proceed to Checkout
+            Checkout — {formatPrice(cart.total())}
           </button>
         </div>
       </div>

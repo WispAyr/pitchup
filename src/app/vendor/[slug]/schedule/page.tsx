@@ -15,6 +15,17 @@ export default async function SchedulePage({
         include: { location: true },
         orderBy: { dayOfWeek: 'asc' },
       },
+      routes: {
+        where: { isActive: true },
+        include: {
+          vehicle: true,
+          stops: {
+            include: { location: true },
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+        orderBy: [{ dayOfWeek: 'asc' }, { name: 'asc' }],
+      },
       liveSessions: {
         where: { endedAt: null },
         include: { location: true },
@@ -42,19 +53,32 @@ export default async function SchedulePage({
       })),
   }))
 
-  const locations = vendor.schedules
-    .map((s) => ({
-      id: s.location.id,
-      name: s.location.name,
+  // Collect all unique locations from schedules + routes
+  const locMap = new Map<string, { id: string; name: string; lat: number; lng: number }>()
+  vendor.schedules.forEach((s) => locMap.set(s.location.id, { id: s.location.id, name: s.location.name, lat: s.location.lat, lng: s.location.lng }))
+  vendor.routes.forEach((r) => r.stops.forEach((s) => locMap.set(s.location.id, { id: s.location.id, name: s.location.name, lat: s.location.lat, lng: s.location.lng })))
+  const locations = Array.from(locMap.values())
+
+  const routesByDay = vendor.routes.map((r) => ({
+    id: r.id,
+    name: r.name,
+    dayOfWeek: r.dayOfWeek,
+    vehicleName: r.vehicle?.name || null,
+    stops: r.stops.map((s) => ({
+      id: s.id,
+      locationName: s.location.name,
+      startTime: s.startTime,
+      endTime: s.endTime,
       lat: s.location.lat,
       lng: s.location.lng,
-    }))
-    .filter((loc, i, arr) => arr.findIndex((l) => l.id === loc.id) === i)
+    })),
+  }))
 
   return (
     <SchedulePageClient
       schedulesByDay={schedulesByDay}
       locations={locations}
+      routes={routesByDay}
       activeSession={
         activeSession
           ? {

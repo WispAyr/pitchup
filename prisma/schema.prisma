@@ -64,6 +64,9 @@ model Vendor {
   documents       Document[]
   maintenanceLogs MaintenanceLog[]
   enquiries       Enquiry[]
+  media           VendorMedia[]
+  routes          Route[]
+  events          Event[]
 
   @@map("vendors")
 }
@@ -97,6 +100,7 @@ model MenuItem {
   vendor        Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   category      MenuCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   locationMenus LocationMenu[]
+  pricingRules  MenuPricing[]
 
   @@map("menu_items")
 }
@@ -114,6 +118,7 @@ model Location {
   schedules    Schedule[]
   liveSessions LiveSession[]
   locationMenus LocationMenu[]
+  routeStops   RouteStop[]
 
   @@map("locations")
 }
@@ -137,6 +142,7 @@ model LiveSession {
   id            String    @id @default(cuid())
   vendorId      String
   locationId    String
+  vehicleId     String?
   startedAt     DateTime  @default(now())
   endedAt       DateTime?
   lat           Float
@@ -151,6 +157,7 @@ model LiveSession {
 
   vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  vehicle    Vehicle? @relation(fields: [vehicleId], references: [id])
   orders     Order[]
 
   @@map("live_sessions")
@@ -263,6 +270,7 @@ model Vehicle {
   year         Int?
   photo        String?
   notes        String?  @db.Text
+  role         String   @default("route") // route, events, backup
   status       String   @default("active") // active, maintenance, retired
 
   createdAt    DateTime @default(now())
@@ -271,6 +279,9 @@ model Vehicle {
   vendor          Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   documents       Document[]
   maintenanceLogs MaintenanceLog[]
+  routes          Route[]
+  events          Event[]
+  liveSessions    LiveSession[]
 
   @@map("vehicles")
 }
@@ -351,4 +362,83 @@ model Enquiry {
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@map("enquiries")
+}
+
+model MenuPricing {
+  id         String   @id @default(cuid())
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  label      String   // "Lunch Special", "Evening"
+  price      Int      // in pence
+  startTime  String   // "12:00"
+  endTime    String   // "14:00"
+  daysOfWeek Int[]    // [1,2,3,4,5] = Mon-Fri
+  isActive   Boolean  @default(true)
+
+  @@map("menu_pricing")
+}
+
+model VendorMedia {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  url       String
+  filename  String
+  tags      String[]
+  caption   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("vendor_media")
+}
+
+model Event {
+  id              String   @id @default(cuid())
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vehicleId       String?
+  vehicle         Vehicle? @relation(fields: [vehicleId], references: [id])
+  name            String
+  description     String?  @db.Text
+  location        String
+  latitude        Float?
+  longitude       Float?
+  startDate       DateTime
+  endDate         DateTime
+  isMultiDay      Boolean  @default(false)
+  imageUrl        String?
+  status          String   @default("upcoming") // upcoming, live, completed, cancelled
+  preOrderEnabled Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@map("events")
+}
+
+model Route {
+  id        String      @id @default(cuid())
+  vendorId  String
+  vendor    Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vehicleId String?
+  vehicle   Vehicle?    @relation(fields: [vehicleId], references: [id])
+  name      String
+  dayOfWeek Int
+  stops     RouteStop[]
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("routes")
+}
+
+model RouteStop {
+  id         String   @id @default(cuid())
+  routeId    String
+  route      Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+  startTime  String
+  endTime    String
+  sortOrder  Int      @default(0)
+
+  @@map("route_stops")
 }

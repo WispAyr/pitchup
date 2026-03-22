@@ -1,6 +1,14 @@
 'use client'
 import { createContext, useContext } from 'react'
 
+type LiveSessionInfo = {
+  id: string
+  vehicleName: string | null
+  locationName: string
+  lat: number
+  lng: number
+}
+
 type VendorData = {
   id: string
   slug: string
@@ -21,12 +29,14 @@ type VendorData = {
   preOrderingEnabled: boolean
   templateId: string
   isLive: boolean
+  liveSessionCount?: number
+  liveSessions?: LiveSessionInfo[]
   liveLocation?: { name: string; lat: number; lng: number } | null
 }
 
 const VendorContext = createContext<VendorData | null>(null)
 
-export type { VendorData }
+export type { VendorData, LiveSessionInfo }
 
 export function VendorProvider({ vendor, children }: { vendor: VendorData; children: React.ReactNode }) {
   return <VendorContext.Provider value={vendor}>{children}</VendorContext.Provider>

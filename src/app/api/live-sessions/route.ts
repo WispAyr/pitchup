@@ -3,21 +3,25 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const vendorId = request.nextUrl.searchParams.get('vendorId')
+    
     const sessions = await prisma.liveSession.findMany({
-      where: { endedAt: null, cancelled: false },
+      where: {
+        endedAt: null,
+        cancelled: false,
+        ...(vendorId ? { vendorId } : {}),
+      },
       include: {
         vendor: {
-          select: {
-            name: true,
-            slug: true,
-            cuisineType: true,
-            primaryColor: true,
-          },
+          select: { name: true, slug: true, cuisineType: true, primaryColor: true },
         },
         location: {
           select: { name: true },
+        },
+        vehicle: {
+          select: { id: true, name: true, photo: true },
         },
       },
       orderBy: { startedAt: 'desc' },
@@ -43,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { locationId } = body
+    const { locationId, vehicleId } = body
 
     if (!locationId) {
       return NextResponse.json({ error: 'locationId is required' }, { status: 400 })
@@ -56,21 +60,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Location not found' }, { status: 404 })
     }
 
-    // End any existing live sessions
-    await prisma.liveSession.updateMany({
-      where: { vendorId: user.id, endedAt: null },
-      data: { endedAt: new Date() },
-    })
+    // Validate vehicle if provided
+    if (vehicleId) {
+      const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } })
+      if (!vehicle || vehicle.vendorId !== user.id) {
+        return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 })
+      }
+      // End existing session for THIS vehicle only
+      await prisma.liveSession.updateMany({
+        where: { vendorId: user.id, vehicleId, endedAt: null },
+        data: { endedAt: new Date() },
+      })
+    } else {
+      // Legacy: end all sessions without a vehicle
+      await prisma.liveSession.updateMany({
+        where: { vendorId: user.id, vehicleId: null, endedAt: null },
+        data: { endedAt: new Date() },
+      })
+    }
 
     const liveSession = await prisma.liveSession.create({
       data: {
         vendorId: user.id,
         locationId,
+        vehicleId: vehicleId || null,
         lat: location.lat,
         lng: location.lng,
       },
       include: {
         location: true,
+        vehicle: true,
       },
     })
 
@@ -94,11 +113,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { action, delayMinutes, delayMessage, cancelReason, sessionId } = body
+    const { action, delayMinutes, delayMessage, cancelReason, sessionId, vehicleId } = body
 
+    // Find session: by sessionId, by vehicleId, or first active
     const liveSession = await prisma.liveSession.findFirst({
       where: sessionId
         ? { id: sessionId, vendorId: user.id }
+        : vehicleId
+        ? { vendorId: user.id, vehicleId, endedAt: null }
         : { vendorId: user.id, endedAt: null },
     })
 
@@ -107,7 +129,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'delay') {
-      // Mark as delayed
       const updated = await prisma.liveSession.update({
         where: { id: liveSession.id },
         data: {
@@ -116,7 +137,6 @@ export async function PATCH(request: NextRequest) {
         },
       })
 
-      // Shift time slots for pre-orders
       if (delayMinutes) {
         const activeOrders = await prisma.order.findMany({
           where: {
@@ -125,7 +145,6 @@ export async function PATCH(request: NextRequest) {
             timeSlotStart: { not: null },
           },
         })
-
         for (const order of activeOrders) {
           if (order.timeSlotStart && order.timeSlotEnd) {
             await prisma.order.update({
@@ -143,7 +162,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'cancel') {
-      // Cancel the session
       const updated = await prisma.liveSession.update({
         where: { id: liveSession.id },
         data: {
@@ -154,7 +172,6 @@ export async function PATCH(request: NextRequest) {
         },
       })
 
-      // Cancel all pre-orders for this session
       await prisma.order.updateMany({
         where: {
           liveSessionId: liveSession.id,

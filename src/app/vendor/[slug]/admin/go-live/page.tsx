@@ -3,30 +3,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { AlertTriangle, XCircle } from 'lucide-react'
+import { AlertTriangle, XCircle, Radio, MapPin, Clock, Truck } from 'lucide-react'
 
 const LiveMap = dynamic(() => import('./LiveMap'), { ssr: false })
 
-interface Location {
-  id: string
-  name: string
-  address: string | null
-  lat: number
-  lng: number
-}
-
+interface Location { id: string; name: string; address: string | null; lat: number; lng: number }
+interface Vehicle { id: string; name: string; status: string; photo: string | null }
 interface LiveSession {
-  id: string
-  vendorId: string
-  locationId: string
-  startedAt: string
-  endedAt: string | null
-  lat: number
-  lng: number
-  location: Location
-  delayMinutes: number | null
-  delayMessage: string | null
-  cancelled: boolean
+  id: string; vendorId: string; locationId: string; vehicleId: string | null
+  startedAt: string; endedAt: string | null; lat: number; lng: number
+  location: Location; vehicle: Vehicle | null
+  delayMinutes: number | null; delayMessage: string | null; cancelled: boolean
 }
 
 export default function GoLivePage() {
@@ -35,19 +22,19 @@ export default function GoLivePage() {
 
   const [vendorId, setVendorId] = useState('')
   const [locations, setLocations] = useState<Location[]>([])
-  const [activeSession, setActiveSession] = useState<LiveSession | null>(null)
+  const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [activeSessions, setActiveSessions] = useState<LiveSession[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [submitting, setSubmitting] = useState<string | null>(null)
 
+  // Per-van state
+  const [goLiveVehicleId, setGoLiveVehicleId] = useState<string | null>(null)
   const [selectedLocationId, setSelectedLocationId] = useState('')
-  const [customLat, setCustomLat] = useState('')
-  const [customLng, setCustomLng] = useState('')
-  const [useCustom, setUseCustom] = useState(false)
 
-  // Delay/cancel state
-  const [showDelayForm, setShowDelayForm] = useState(false)
-  const [showCancelForm, setShowCancelForm] = useState(false)
+  // Delay/cancel
+  const [actionSession, setActionSession] = useState<string | null>(null)
+  const [actionType, setActionType] = useState<'delay' | 'cancel' | null>(null)
   const [delayMinutes, setDelayMinutes] = useState('15')
   const [delayMessage, setDelayMessage] = useState('')
   const [cancelReason, setCancelReason] = useState('')
@@ -59,412 +46,299 @@ export default function GoLivePage() {
       if (!vendor.id) throw new Error('Vendor not found')
       setVendorId(vendor.id)
 
-      const [locRes, sessionRes] = await Promise.all([
+      const [locRes, sessionRes, vehicleRes] = await Promise.all([
         fetch(`/api/locations?vendorId=${vendor.id}`),
         fetch(`/api/live-sessions?vendorId=${vendor.id}`),
+        fetch(`/api/vendor/${slug}/vehicles`),
       ])
 
       const locs = await locRes.json()
       setLocations(locs)
-      if (locs.length > 0 && !selectedLocationId) {
-        setSelectedLocationId(locs[0].id)
-      }
+      if (locs.length > 0 && !selectedLocationId) setSelectedLocationId(locs[0].id)
 
-      const sessions = await sessionRes.json()
-      const active = sessions.find((s: LiveSession) => !s.endedAt) || null
-      setActiveSession(active)
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+      const sessions: LiveSession[] = await sessionRes.json()
+      setActiveSessions(sessions.filter(s => !s.endedAt && !s.cancelled))
+
+      const vehs: Vehicle[] = await vehicleRes.json()
+      setVehicles(vehs.filter(v => v.status === 'active'))
+    } catch (err: any) { setError(err.message) }
+    finally { setLoading(false) }
   }, [slug, selectedLocationId])
 
+  useEffect(() => { fetchData() }, [fetchData])
+
+  // Auto-refresh
   useEffect(() => {
-    fetchData()
+    const id = setInterval(fetchData, 10000)
+    return () => clearInterval(id)
   }, [fetchData])
 
-  async function handleGoLive() {
-    let locationId: string
+  function getSessionForVehicle(vehicleId: string) {
+    return activeSessions.find(s => s.vehicleId === vehicleId)
+  }
 
-    if (useCustom) {
-      const lat = parseFloat(customLat)
-      const lng = parseFloat(customLng)
-      if (isNaN(lat) || isNaN(lng)) {
-        setError('Enter valid coordinates')
-        return
-      }
-      locationId = selectedLocationId || locations[0]?.id
-      if (!locationId) {
-        setError('You need at least one saved location to go live')
-        return
-      }
-    } else {
-      if (!selectedLocationId) {
-        setError('Select a location')
-        return
-      }
-      locationId = selectedLocationId
-    }
+  function getDuration(startedAt: string) {
+    const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
+    const h = Math.floor(diff / 3600)
+    const m = Math.floor((diff % 3600) / 60)
+    return h > 0 ? `${h}h ${m}m` : `${m}m`
+  }
 
-    setSubmitting(true)
+  async function handleGoLive(vehicleId: string) {
+    if (!selectedLocationId) { setError('Select a location'); return }
+    setSubmitting(vehicleId)
     setError('')
     try {
       const res = await fetch('/api/live-sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locationId }),
+        body: JSON.stringify({ locationId: selectedLocationId, vehicleId }),
       })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to go live')
-      }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+      setGoLiveVehicleId(null)
       await fetchData()
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setSubmitting(false)
-    }
+    } catch (err: any) { setError(err.message) }
+    finally { setSubmitting(null) }
   }
 
-  async function handleEndSession() {
-    setSubmitting(true)
-    setError('')
+  async function handleEndSession(vehicleId: string) {
+    setSubmitting(vehicleId)
     try {
-      const res = await fetch('/api/live-sessions', {
+      await fetch('/api/live-sessions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'end' }),
+        body: JSON.stringify({ action: 'end', vehicleId }),
       })
-      if (!res.ok) throw new Error('Failed to end session')
-      setActiveSession(null)
       await fetchData()
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setSubmitting(false)
-    }
+    } catch {} finally { setSubmitting(null) }
   }
 
-  async function handleDelay() {
-    setSubmitting(true)
-    setError('')
+  async function handleSessionAction() {
+    if (!actionSession) return
+    setSubmitting(actionSession)
     try {
-      const res = await fetch('/api/live-sessions', {
+      await fetch('/api/live-sessions', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'delay',
-          delayMinutes: parseInt(delayMinutes),
-          delayMessage: delayMessage || undefined,
+          sessionId: actionSession,
+          action: actionType,
+          ...(actionType === 'delay' ? { delayMinutes: parseInt(delayMinutes), delayMessage } : {}),
+          ...(actionType === 'cancel' ? { cancelReason } : {}),
         }),
       })
-      if (!res.ok) throw new Error('Failed to update delay')
-      setShowDelayForm(false)
-      setDelayMessage('')
+      setActionSession(null)
+      setActionType(null)
       await fetchData()
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function handleCancel() {
-    setSubmitting(true)
-    setError('')
-    try {
-      const res = await fetch('/api/live-sessions', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'cancel',
-          cancelReason: cancelReason || undefined,
-        }),
-      })
-      if (!res.ok) throw new Error('Failed to cancel session')
-      setShowCancelForm(false)
-      setCancelReason('')
-      setActiveSession(null)
-      await fetchData()
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  function handleMapClick(lat: number, lng: number) {
-    setCustomLat(lat.toFixed(6))
-    setCustomLng(lng.toFixed(6))
-    setUseCustom(true)
-  }
-
-  function getDuration(startedAt: string): string {
-    const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
-    const hours = Math.floor(diff / 3600)
-    const minutes = Math.floor((diff % 3600) / 60)
-    if (hours > 0) return `${hours}h ${minutes}m`
-    return `${minutes}m`
+    } catch {} finally { setSubmitting(null) }
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-gray-600" />
-      </div>
-    )
+    return <div className="flex items-center justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-gray-600" /></div>
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Go Live</h1>
+      <h1 className="mb-2 text-2xl font-extrabold text-gray-900">Go Live</h1>
+      <p className="mb-6 text-sm text-gray-500">Manage each van independently. Multiple vans can be live at the same time.</p>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700">
           {error}
           <button onClick={() => setError('')} className="ml-2 font-bold">✕</button>
         </div>
       )}
 
-      {activeSession ? (
-        <div className="space-y-6">
-          {/* Active session card */}
-          <div className="rounded-xl border-2 border-green-200 bg-green-50 p-6 text-center">
-            <div className="mb-3 flex items-center justify-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
-              </span>
-              <span className="text-lg font-bold text-green-700">YOU ARE LIVE</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              at <span className="font-semibold text-gray-900">{activeSession.location.name}</span>
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
-              Duration: {getDuration(activeSession.startedAt)}
-            </p>
+      {/* Summary bar */}
+      <div className="mb-6 flex items-center gap-4 text-sm">
+        <span className="rounded-full bg-green-100 px-3 py-1.5 font-bold text-green-700">
+          {activeSessions.length} live
+        </span>
+        <span className="text-gray-400">
+          {vehicles.length - activeSessions.length} offline
+        </span>
+      </div>
 
-            {/* Delay banner */}
-            {activeSession.delayMinutes && activeSession.delayMinutes > 0 && (
-              <div className="mt-3 rounded-lg bg-amber-100 border border-amber-200 p-3">
-                <p className="text-sm font-semibold text-amber-800">
-                  ⚠️ Running {activeSession.delayMinutes} minutes late
-                </p>
-                {activeSession.delayMessage && (
-                  <p className="text-xs text-amber-700 mt-1">{activeSession.delayMessage}</p>
+      {/* Van cards */}
+      {vehicles.length === 0 ? (
+        <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+          <Truck className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+          <p className="font-bold text-gray-900">No vehicles yet</p>
+          <p className="text-sm text-gray-500 mt-1">Add a van in Fleet Management first.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {vehicles.map((vehicle) => {
+            const session = getSessionForVehicle(vehicle.id)
+            const isLive = !!session
+            const isExpanded = goLiveVehicleId === vehicle.id
+
+            return (
+              <div
+                key={vehicle.id}
+                className={`rounded-2xl border-2 p-5 transition-all ${
+                  isLive ? 'border-green-300 bg-green-50' : 'border-gray-100 bg-white'
+                }`}
+              >
+                {/* Van header */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-xl">
+                    🚐
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-extrabold text-gray-900 truncate">{vehicle.name}</h3>
+                    {isLive && session ? (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                        </span>
+                        <span className="font-bold text-green-700">Live at {session.location.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">Offline</span>
+                    )}
+                  </div>
+                </div>
+
+                {isLive && session ? (
+                  <>
+                    {/* Live info */}
+                    <div className="mb-3 flex items-center gap-4 text-xs text-gray-500">
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {getDuration(session.startedAt)}</span>
+                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {session.location.name}</span>
+                    </div>
+
+                    {session.delayMinutes && session.delayMinutes > 0 && (
+                      <div className="mb-3 rounded-lg bg-amber-100 border border-amber-200 p-2 text-xs text-amber-800">
+                        ⚠️ Running {session.delayMinutes}min late
+                        {session.delayMessage && <> — {session.delayMessage}</>}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => { setActionSession(session.id); setActionType('delay') }}
+                        className="flex h-9 items-center gap-1 rounded-lg bg-amber-100 px-3 text-xs font-bold text-amber-700 active:bg-amber-200"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5" /> Late
+                      </button>
+                      <button
+                        onClick={() => { setActionSession(session.id); setActionType('cancel') }}
+                        className="flex h-9 items-center gap-1 rounded-lg bg-red-100 px-3 text-xs font-bold text-red-700 active:bg-red-200"
+                      >
+                        <XCircle className="h-3.5 w-3.5" /> Cancel
+                      </button>
+                      <button
+                        onClick={() => handleEndSession(vehicle.id)}
+                        disabled={submitting === vehicle.id}
+                        className="flex h-9 flex-1 items-center justify-center rounded-lg bg-gray-900 text-xs font-bold text-white active:bg-gray-800 disabled:opacity-50"
+                      >
+                        {submitting === vehicle.id ? 'Ending...' : 'End Session'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {isExpanded ? (
+                      <div className="space-y-3">
+                        <select
+                          value={selectedLocationId}
+                          onChange={(e) => setSelectedLocationId(e.target.value)}
+                          className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm"
+                        >
+                          {locations.map(loc => (
+                            <option key={loc.id} value={loc.id}>{loc.name}</option>
+                          ))}
+                        </select>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleGoLive(vehicle.id)}
+                            disabled={submitting === vehicle.id || locations.length === 0}
+                            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 font-bold text-white active:bg-green-500 disabled:opacity-50"
+                          >
+                            <Radio className="h-4 w-4" />
+                            {submitting === vehicle.id ? 'Going live...' : 'GO LIVE'}
+                          </button>
+                          <button
+                            onClick={() => setGoLiveVehicleId(null)}
+                            className="flex h-11 items-center rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-600 active:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setGoLiveVehicleId(vehicle.id)}
+                        disabled={locations.length === 0}
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-green-600 font-bold text-white active:bg-green-500 disabled:opacity-50"
+                      >
+                        <Radio className="h-4 w-4" />
+                        Go Live
+                      </button>
+                    )}
+                  </>
                 )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Action modal */}
+      {actionSession && actionType && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => { setActionSession(null); setActionType(null) }}>
+          <div className="w-full max-w-md rounded-t-3xl bg-white p-6 shadow-xl sm:rounded-3xl" onClick={e => e.stopPropagation()}>
+            {actionType === 'delay' ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-extrabold text-gray-900">Running Late</h3>
+                <select
+                  value={delayMinutes}
+                  onChange={e => setDelayMinutes(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm"
+                >
+                  {[5, 10, 15, 20, 30, 45, 60].map(m => <option key={m} value={m}>{m} minutes</option>)}
+                </select>
+                <input
+                  type="text" placeholder="Message (optional)"
+                  value={delayMessage} onChange={e => setDelayMessage(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm"
+                />
+                <button onClick={handleSessionAction} disabled={!!submitting}
+                  className="flex h-12 w-full items-center justify-center rounded-xl bg-amber-500 font-bold text-white active:bg-amber-600 disabled:opacity-50">
+                  Notify Customers
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="text-lg font-extrabold text-red-700">Cancel Session</h3>
+                <p className="text-sm text-gray-500">This will cancel pending pre-orders and notify customers.</p>
+                <input
+                  type="text" placeholder="Reason (optional)"
+                  value={cancelReason} onChange={e => setCancelReason(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm"
+                />
+                <button onClick={handleSessionAction} disabled={!!submitting}
+                  className="flex h-12 w-full items-center justify-center rounded-xl bg-red-600 font-bold text-white active:bg-red-700 disabled:opacity-50">
+                  Cancel Session
+                </button>
               </div>
             )}
           </div>
-
-          {/* Action buttons */}
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => { setShowDelayForm(true); setShowCancelForm(false) }}
-              className="flex items-center gap-2 rounded-xl bg-amber-100 px-5 py-3 text-sm font-bold text-amber-700 hover:bg-amber-200"
-            >
-              <AlertTriangle className="h-4 w-4" />
-              Running Late
-            </button>
-            <button
-              onClick={() => { setShowCancelForm(true); setShowDelayForm(false) }}
-              className="flex items-center gap-2 rounded-xl bg-red-100 px-5 py-3 text-sm font-bold text-red-700 hover:bg-red-200"
-            >
-              <XCircle className="h-4 w-4" />
-              Cancel Session
-            </button>
-            <button
-              onClick={handleEndSession}
-              disabled={submitting}
-              className="rounded-xl bg-gray-900 px-8 py-3 text-sm font-bold text-white hover:bg-gray-800 disabled:opacity-50"
-            >
-              {submitting ? 'Ending...' : 'End Session'}
-            </button>
-          </div>
-
-          {/* Delay form */}
-          {showDelayForm && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
-              <h3 className="text-sm font-bold text-amber-800">Notify Customers of Delay</h3>
-              <div>
-                <label className="text-xs font-medium text-amber-700">How late? (minutes)</label>
-                <select
-                  value={delayMinutes}
-                  onChange={(e) => setDelayMinutes(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm"
-                >
-                  {[5, 10, 15, 20, 30, 45, 60].map((m) => (
-                    <option key={m} value={m}>{m} minutes</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-amber-700">Message (optional)</label>
-                <input
-                  type="text"
-                  value={delayMessage}
-                  onChange={(e) => setDelayMessage(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm"
-                  placeholder="e.g. Stuck in traffic, be there soon!"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleDelay}
-                  disabled={submitting}
-                  className="rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-white hover:bg-amber-600 disabled:opacity-50"
-                >
-                  Notify Customers
-                </button>
-                <button
-                  onClick={() => setShowDelayForm(false)}
-                  className="rounded-lg bg-white px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Cancel form */}
-          {showCancelForm && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
-              <h3 className="text-sm font-bold text-red-800">Cancel This Session</h3>
-              <p className="text-xs text-red-600">
-                This will cancel all pending pre-orders and notify customers.
-              </p>
-              <div>
-                <label className="text-xs font-medium text-red-700">Reason</label>
-                <input
-                  type="text"
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm"
-                  placeholder="e.g. Vehicle breakdown"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCancel}
-                  disabled={submitting}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
-                >
-                  Cancel Session & Notify
-                </button>
-                <button
-                  onClick={() => setShowCancelForm(false)}
-                  className="rounded-lg bg-white px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50"
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Map */}
-          <div className="overflow-hidden rounded-xl border border-gray-100">
-            <LiveMap
-              lat={activeSession.lat}
-              lng={activeSession.lng}
-              onMapClick={() => {}}
-              interactive={false}
-            />
-          </div>
         </div>
-      ) : (
-        // Not live
-        <div className="space-y-6">
-          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-            <div className="mb-6 text-center">
-              <h2 className="mb-2 text-lg font-bold text-gray-900">Ready to serve?</h2>
-              <p className="text-sm text-gray-500">Select a location and go live so customers can find you.</p>
-            </div>
+      )}
 
-            <div className="mb-4">
-              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-600">
-                <input
-                  type="radio"
-                  checked={!useCustom}
-                  onChange={() => setUseCustom(false)}
-                />
-                Saved location
-              </label>
-              {!useCustom && (
-                <select
-                  value={selectedLocationId}
-                  onChange={(e) => setSelectedLocationId(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
-                >
-                  {locations.length === 0 && <option value="">No locations saved</option>}
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name} {loc.address ? `— ${loc.address}` : ''}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div className="mb-6">
-              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-600">
-                <input
-                  type="radio"
-                  checked={useCustom}
-                  onChange={() => setUseCustom(true)}
-                />
-                Custom coordinates (click map)
-              </label>
-              {useCustom && (
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    step="any"
-                    value={customLat}
-                    onChange={(e) => setCustomLat(e.target.value)}
-                    placeholder="Latitude"
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    value={customLng}
-                    onChange={(e) => setCustomLng(e.target.value)}
-                    placeholder="Longitude"
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-amber-400 focus:outline-none"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="text-center">
-              <button
-                onClick={handleGoLive}
-                disabled={submitting || (locations.length === 0 && !useCustom)}
-                className="rounded-xl bg-green-600 px-10 py-4 text-xl font-bold text-white shadow-lg shadow-green-600/25 hover:bg-green-500 disabled:opacity-50 disabled:shadow-none"
-              >
-                {submitting ? 'Going live...' : '🔴 GO LIVE'}
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-gray-100">
-            <p className="mb-2 text-sm text-gray-500">Click on the map to set custom coordinates:</p>
-            <LiveMap
-              lat={
-                useCustom && customLat
-                  ? parseFloat(customLat)
-                  : locations.find((l) => l.id === selectedLocationId)?.lat || 55.46
-              }
-              lng={
-                useCustom && customLng
-                  ? parseFloat(customLng)
-                  : locations.find((l) => l.id === selectedLocationId)?.lng || -4.63
-              }
-              onMapClick={handleMapClick}
-              interactive={true}
-            />
-          </div>
+      {/* Map */}
+      {activeSessions.length > 0 && (
+        <div className="mt-8 overflow-hidden rounded-2xl border border-gray-100">
+          <LiveMap
+            lat={activeSessions[0].lat}
+            lng={activeSessions[0].lng}
+            onMapClick={() => {}}
+            interactive={false}
+          />
         </div>
       )}
     </div>

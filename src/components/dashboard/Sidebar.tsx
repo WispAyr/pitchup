@@ -23,6 +23,9 @@ import {
   Wrench,
   MessageSquare,
   MapPin,
+  Image,
+  Route,
+  PartyPopper,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -38,6 +41,9 @@ const NAV_ITEMS = [
   { label: 'Menu', href: '/menu', icon: UtensilsCrossed },
   { label: 'Go Live', href: '/go-live', icon: Radio },
   { label: 'Schedule', href: '/schedule', icon: Calendar },
+  { label: 'Routes', href: '/routes', icon: Route },
+  { label: 'Events', href: '/events', icon: PartyPopper },
+  { label: 'Gallery', href: '/gallery', icon: Image },
   { label: 'Social Posts', href: '/social', icon: Share2 },
   { label: 'Fleet', href: '/fleet', icon: Truck },
   { label: 'Documents', href: '/documents', icon: FileCheck },

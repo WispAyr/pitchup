@@ -36,13 +36,29 @@ type LocationMarker = {
   lng: number
 }
 
+type RouteData = {
+  id: string
+  name: string
+  dayOfWeek: number
+  vehicleName: string | null
+  stops: { id: string; locationName: string; startTime: string; endTime: string; lat: number; lng: number }[]
+}
+
 type Props = {
   schedulesByDay: DaySchedule[]
   locations: LocationMarker[]
+  routes?: RouteData[]
   activeSession: { locationName: string; lat: number; lng: number } | null
 }
 
-export function SchedulePageClient({ schedulesByDay, locations, activeSession }: Props) {
+function formatTime(t: string) {
+  const [h, m] = t.split(':').map(Number)
+  const suffix = h >= 12 ? 'pm' : 'am'
+  const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h
+  return `${h12}:${m.toString().padStart(2, '0')}${suffix}`
+}
+
+export function SchedulePageClient({ schedulesByDay, locations, routes = [], activeSession }: Props) {
   const vendor = useVendor()
   const today = useMemo(() => new Date().getDay(), [])
 
@@ -72,59 +88,124 @@ export function SchedulePageClient({ schedulesByDay, locations, activeSession }:
         </div>
       )}
 
-      {/* Weekly calendar */}
-      <div className="space-y-2">
-        {schedulesByDay.map((day) => {
-          const isToday = day.dayIndex === today
-          return (
-            <div
-              key={day.day}
-              className={`rounded-xl border p-4 transition-colors ${
-                isToday
-                  ? 'border-2 bg-white shadow-sm'
-                  : 'border-gray-100 bg-white'
-              }`}
-              style={isToday ? { borderColor: vendor.primaryColor } : undefined}
-            >
-              <div className="flex items-center gap-2">
+      {/* Routes by day */}
+      {routes.length > 0 && (
+        <div className="space-y-2">
+          {DAY_NAMES.map((dayName, dayIndex) => {
+            const dayRoutes = routes.filter(r => r.dayOfWeek === dayIndex)
+            const dayScheduleEntries = schedulesByDay.find(d => d.dayIndex === dayIndex)?.entries || []
+            if (dayRoutes.length === 0 && dayScheduleEntries.length === 0) return null
+            const isToday = dayIndex === today
+            return (
+              <div
+                key={dayName}
+                className={`rounded-xl border p-4 transition-colors ${
+                  isToday ? 'border-2 bg-white shadow-sm' : 'border-gray-100 bg-white'
+                }`}
+                style={isToday ? { borderColor: vendor.primaryColor } : undefined}
+              >
                 <h3
-                  className={`text-sm font-bold sm:text-base ${
-                    isToday ? '' : 'text-gray-900'
-                  }`}
+                  className={`text-sm font-bold sm:text-base ${isToday ? '' : 'text-gray-900'}`}
                   style={isToday ? { color: vendor.primaryColor } : undefined}
                 >
-                  {day.day}
+                  {dayName}
                   {isToday && (
-                    <span
-                      className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white"
-                      style={{ backgroundColor: vendor.primaryColor }}
-                    >
+                    <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ backgroundColor: vendor.primaryColor }}>
                       TODAY
                     </span>
                   )}
                 </h3>
-              </div>
 
-              {day.entries.length > 0 ? (
-                <div className="mt-2 space-y-2">
-                  {day.entries.map((entry) => (
-                    <div key={entry.id} className="flex items-center gap-3 text-sm">
-                      <Clock className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                      <span className="font-medium text-gray-700">
-                        {entry.startTime} - {entry.endTime}
+                {/* Routes */}
+                {dayRoutes.map(route => (
+                  <div key={route.id} className="mt-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-base">🚐</span>
+                      <span className="text-sm font-semibold text-gray-800">
+                        {route.vehicleName || route.name}
                       </span>
-                      <MapPin className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                      <span className="text-gray-600">{entry.locationName}</span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-1 text-xs text-gray-400">No scheduled appearances</p>
-              )}
-            </div>
-          )
-        })}
-      </div>
+                    <div className="space-y-1 pl-7">
+                      {route.stops.map(stop => (
+                        <div key={stop.id} className="flex items-center gap-2 text-sm">
+                          <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                          <span className="text-gray-600">{stop.locationName}</span>
+                          <span className="text-gray-400">—</span>
+                          <span className="font-medium text-gray-700">{formatTime(stop.startTime)}-{formatTime(stop.endTime)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Legacy schedule entries (non-route) */}
+                {dayRoutes.length === 0 && dayScheduleEntries.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {dayScheduleEntries.map((entry) => (
+                      <div key={entry.id} className="flex items-center gap-3 text-sm">
+                        <Clock className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                        <span className="font-medium text-gray-700">{entry.startTime} - {entry.endTime}</span>
+                        <MapPin className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                        <span className="text-gray-600">{entry.locationName}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {dayRoutes.length === 0 && dayScheduleEntries.length === 0 && (
+                  <p className="mt-1 text-xs text-gray-400">No scheduled appearances</p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Fallback: old weekly calendar if no routes */}
+      {routes.length === 0 && (
+        <div className="space-y-2">
+          {schedulesByDay.map((day) => {
+            const isToday = day.dayIndex === today
+            return (
+              <div
+                key={day.day}
+                className={`rounded-xl border p-4 transition-colors ${
+                  isToday ? 'border-2 bg-white shadow-sm' : 'border-gray-100 bg-white'
+                }`}
+                style={isToday ? { borderColor: vendor.primaryColor } : undefined}
+              >
+                <h3
+                  className={`text-sm font-bold sm:text-base ${isToday ? '' : 'text-gray-900'}`}
+                  style={isToday ? { color: vendor.primaryColor } : undefined}
+                >
+                  {day.day}
+                  {isToday && (
+                    <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-white" style={{ backgroundColor: vendor.primaryColor }}>
+                      TODAY
+                    </span>
+                  )}
+                </h3>
+                {day.entries.length > 0 ? (
+                  <div className="mt-2 space-y-2">
+                    {day.entries.map((entry) => (
+                      <div key={entry.id} className="flex items-center gap-3 text-sm">
+                        <Clock className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                        <span className="font-medium text-gray-700">{entry.startTime} - {entry.endTime}</span>
+                        <MapPin className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                        <span className="text-gray-600">{entry.locationName}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-400">No scheduled appearances</p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
