@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vendor {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  description     String?  @db.Text
+  logo            String?
+  banner          String?
+  primaryColor    String   @default("#F59E0B")
+  secondaryColor  String   @default("#78350F")
+  cuisineType     String?
+  phone           String?
+  email           String
+  website         String?
+  facebook        String?
+  instagram       String?
+  tiktok          String?
+  twitter         String?
+
+  stripeAccountId     String?
+  stripeOnboarded     Boolean  @default(false)
+  preOrderingEnabled  Boolean  @default(true)
+
+  // Prep time in minutes per item (default 5)
+  defaultPrepTime     Int      @default(5)
+  // Max concurrent orders per time slot
+  maxOrdersPerSlot    Int      @default(3)
+  // Slot interval in minutes
+  slotIntervalMinutes Int      @default(10)
+
+  passwordHash    String
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  menuCategories  MenuCategory[]
+  menuItems       MenuItem[]
+  locations       Location[]
+  schedules       Schedule[]
+  liveSessions    LiveSession[]
+  orders          Order[]
+  follows         Follow[]
+  reviews         Review[]
+  notifications   Notification[]
+
+  @@map("vendors")
+}
+
+model MenuCategory {
+  id        String   @id @default(cuid())
+  vendorId  String
+  name      String
+  sortOrder Int      @default(0)
+
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  items     MenuItem[]
+
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id           String   @id @default(cuid())
+  vendorId     String
+  categoryId   String
+  name         String
+  description  String?  @db.Text
+  price        Int      // in pence
+  image        String?
+  allergens    String[] // e.g., ["gluten", "dairy", "eggs"]
+  dietaryTags  String[] // e.g., ["vegetarian", "vegan", "gluten-free"]
+  available    Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  prepTime     Int?     // minutes, overrides vendor default
+
+  vendor       Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category     MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("menu_items")
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  vendorId  String
+  name      String
+  address   String?
+  lat       Float
+  lng       Float
+  isRegular Boolean  @default(false)
+
+  vendor    Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  schedules Schedule[]
+  liveSessions LiveSession[]
+
+  @@map("locations")
+}
+
+model Schedule {
+  id         String   @id @default(cuid())
+  vendorId   String
+  locationId String
+  dayOfWeek  Int      // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startTime  String   // "17:00"
+  endTime    String   // "21:00"
+  recurring  Boolean  @default(true)
+
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@map("schedules")
+}
+
+model LiveSession {
+  id            String    @id @default(cuid())
+  vendorId      String
+  locationId    String
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+  lat           Float
+  lng           Float
+
+  // Delay & cancellation
+  delayMinutes  Int?      // how many minutes late
+  delayMessage  String?   @db.Text
+  cancelled     Boolean   @default(false)
+  cancelReason  String?   @db.Text
+  cancelledAt   DateTime?
+
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  orders     Order[]
+
+  @@map("live_sessions")
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders       Order[]
+  follows      Follow[]
+  reviews      Review[]
+  notifications Notification[]
+
+  @@map("customers")
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  vendorId        String
+  customerId      String?  // nullable for guest orders
+  liveSessionId   String?
+  items           Json     // [{menuItemId, name, price, quantity}]
+  subtotal        Int      // in pence
+  total           Int      // in pence
+  status          String   @default("pending") // pending, confirmed, preparing, ready, collected, cancelled, no-show
+  collectionTime  DateTime?
+  customerName    String
+  customerPhone   String?
+  customerEmail   String?
+  stripePaymentId String?
+
+  // Pre-order with pay-on-collection
+  pickupCode      String?  @unique // e.g. "P-4729"
+  timeSlotStart   DateTime?
+  timeSlotEnd     DateTime?
+  paymentMethod   String?  // cash, card — filled when collected
+  paidAt          DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  noShowAt        DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vendor          Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer        Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  liveSession     LiveSession? @relation(fields: [liveSessionId], references: [id])
+
+  @@map("orders")
+}
+
+model Follow {
+  id                   String   @id @default(cuid())
+  customerId           String
+  vendorId             String
+  notificationsEnabled Boolean  @default(true)
+  createdAt            DateTime @default(now())
+
+  customer             Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor               Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, vendorId])
+  @@map("follows")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  vendorId   String
+  customerId String
+  rating     Int      // 1-5
+  text       String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Notification {
+  id           String   @id @default(cuid())
+  vendorId     String
+  customerId   String?
+  type         String   // order_confirmed, order_ready, delay, cancellation, session_live
+  title        String
+  message      String   @db.Text
+  read         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  vendor       Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
