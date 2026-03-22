@@ -63,6 +63,7 @@ export async function PATCH(
       'primaryColor',
       'secondaryColor',
       'preOrderingEnabled',
+      'templateId',
     ] as const
 
     const updateData: Record<string, any> = {}
@@ -105,6 +106,7 @@ export async function PATCH(
         preOrderingEnabled: true,
         stripeAccountId: true,
         stripeOnboarded: true,
+        templateId: true,
       },
     })
 

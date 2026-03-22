@@ -2,34 +2,94 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, ArrowLeft, Clock, Copy, Check } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Minus, Plus, Trash2, ShoppingBag, CheckCircle, ArrowLeft, Clock, Copy, Check, MapPin, CalendarDays, AlertTriangle } from 'lucide-react'
 import { useCart } from '@/lib/cart'
 import { useVendor } from '@/lib/vendor-context'
 import { formatPrice } from '@/lib/utils'
 
-function generateTimeSlots() {
-  const slots: string[] = []
-  const now = new Date()
-  const startMinutes = Math.ceil((now.getMinutes() + 15) / 15) * 15
-  const start = new Date(now)
-  start.setMinutes(startMinutes, 0, 0)
+type SessionInfo = {
+  type: 'live' | 'scheduled'
+  sessionId?: string
+  scheduleId?: string
+  locationId: string
+  locationName: string
+  startDateTime?: string
+  endDateTime?: string
+  startedAt?: string
+  estimatedEnd?: string | null
+  date?: string
+  dayName?: string
+  startTime?: string
+  endTime?: string
+}
 
-  for (let i = 0; i < 16; i++) {
-    const slot = new Date(start.getTime() + i * 15 * 60000)
-    if (slot.getHours() >= 23) break
+type SessionsResponse = {
+  vendorId: string
+  vendorName: string
+  defaultPrepTime: number
+  slotIntervalMinutes: number
+  maxOrdersPerSlot: number
+  liveSessions: SessionInfo[]
+  upcomingSessions: SessionInfo[]
+}
+
+function generateScheduleAwareSlots(
+  session: SessionInfo,
+  intervalMinutes: number,
+  prepBuffer: number
+): { label: string; value: string }[] {
+  const slots: { label: string; value: string }[] = []
+  const now = new Date()
+
+  let windowStart: Date
+  let windowEnd: Date
+
+  if (session.type === 'live') {
+    windowStart = new Date(session.startedAt!)
+    windowEnd = session.estimatedEnd ? new Date(session.estimatedEnd) : new Date(now.getTime() + 4 * 60 * 60 * 1000)
+  } else {
+    windowStart = new Date(session.startDateTime!)
+    windowEnd = new Date(session.endDateTime!)
+  }
+
+  // Subtract prep buffer from end
+  const lastSlot = new Date(windowEnd.getTime() - prepBuffer * 60 * 1000)
+
+  // Start from now + 15 mins (minimum lead time) or window start, whichever is later
+  const earliest = new Date(Math.max(now.getTime() + 15 * 60 * 1000, windowStart.getTime()))
+  // Round up to next interval
+  const startMinutes = Math.ceil(earliest.getMinutes() / intervalMinutes) * intervalMinutes
+  const slotStart = new Date(earliest)
+  slotStart.setMinutes(startMinutes, 0, 0)
+
+  for (let t = slotStart.getTime(); t <= lastSlot.getTime(); t += intervalMinutes * 60 * 1000) {
+    const slot = new Date(t)
     const h = slot.getHours().toString().padStart(2, '0')
     const m = slot.getMinutes().toString().padStart(2, '0')
-    slots.push(`${h}:${m}`)
+    slots.push({
+      label: `${h}:${m}`,
+      value: slot.toISOString(),
+    })
   }
 
   return slots
+}
+
+function formatSessionLabel(session: SessionInfo): string {
+  if (session.type === 'live') {
+    return `🟢 LIVE NOW at ${session.locationName}`
+  }
+  const startTime = session.startTime || ''
+  const endTime = session.endTime || ''
+  return `${session.dayName} ${startTime}–${endTime} at ${session.locationName}`
 }
 
 export default function OrderPage() {
   const cart = useCart()
   const vendor = useVendor()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -47,11 +107,60 @@ export default function OrderPage() {
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
 
+  // Session/schedule data
+  const [sessionsData, setSessionsData] = useState<SessionsResponse | null>(null)
+  const [sessionsLoading, setSessionsLoading] = useState(true)
+  const [selectedSessionIdx, setSelectedSessionIdx] = useState<number>(-1)
+
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  const timeSlots = useMemo(() => generateTimeSlots(), [])
+  // Fetch sessions
+  useEffect(() => {
+    async function fetchSessions() {
+      try {
+        const res = await fetch(`/api/vendors/${vendor.slug}/sessions`)
+        if (res.ok) {
+          const data: SessionsResponse = await res.json()
+          setSessionsData(data)
+          // Auto-select live session or first upcoming
+          const allSessions = [...data.liveSessions, ...data.upcomingSessions]
+          if (allSessions.length > 0) {
+            // Check URL param for pre-selected session
+            const sessionParam = searchParams.get('session')
+            if (sessionParam) {
+              const idx = allSessions.findIndex(
+                (s) => s.sessionId === sessionParam || s.scheduleId === sessionParam
+              )
+              setSelectedSessionIdx(idx >= 0 ? idx : 0)
+            } else {
+              setSelectedSessionIdx(0) // default to first (live takes priority)
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch sessions:', e)
+      } finally {
+        setSessionsLoading(false)
+      }
+    }
+    fetchSessions()
+  }, [vendor.slug, searchParams])
+
+  const allSessions = sessionsData
+    ? [...sessionsData.liveSessions, ...sessionsData.upcomingSessions]
+    : []
+  const selectedSession = selectedSessionIdx >= 0 ? allSessions[selectedSessionIdx] : null
+
+  const timeSlots = useMemo(() => {
+    if (!selectedSession || !sessionsData) return []
+    return generateScheduleAwareSlots(
+      selectedSession,
+      sessionsData.slotIntervalMinutes,
+      sessionsData.defaultPrepTime * 2 // buffer for a reasonable order
+    )
+  }, [selectedSession, sessionsData])
 
   const isOurCart = cart.vendorSlug === vendor.slug
   const items = isOurCart ? cart.items : []
@@ -73,10 +182,6 @@ export default function OrderPage() {
     setError('')
 
     try {
-      const [hours, minutes] = collectionTime.split(':').map(Number)
-      const collectionDate = new Date()
-      collectionDate.setHours(hours, minutes, 0, 0)
-
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +198,8 @@ export default function OrderPage() {
           customerName,
           customerPhone: customerPhone || undefined,
           customerEmail: customerEmail || undefined,
-          collectionTime: collectionDate.toISOString(),
+          collectionTime: collectionTime,
+          liveSessionId: selectedSession?.type === 'live' ? selectedSession.sessionId : undefined,
         }),
       })
 
@@ -142,7 +248,13 @@ export default function OrderPage() {
             Your pre-order has been submitted. Pay when you collect.
           </p>
 
-          {/* Pickup Code */}
+          {selectedSession && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600">
+              <MapPin className="h-4 w-4" style={{ color: vendor.primaryColor }} />
+              <span>{selectedSession.locationName}</span>
+            </div>
+          )}
+
           <div className="mt-6 rounded-2xl border-2 border-dashed p-6" style={{ borderColor: vendor.primaryColor }}>
             <p className="text-sm font-medium text-gray-500 mb-2">Your Pickup Code</p>
             <div className="flex items-center justify-center gap-3">
@@ -164,7 +276,6 @@ export default function OrderPage() {
             <p className="mt-1 text-xs text-gray-400">Show this code when you arrive</p>
           </div>
 
-          {/* Time Slot */}
           <div className="mt-4 rounded-xl bg-gray-50 p-4">
             <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
               <Clock className="h-4 w-4" />
@@ -181,7 +292,6 @@ export default function OrderPage() {
             <p className="text-xs text-gray-400 mt-1">Pay on collection — cash or card</p>
           </div>
 
-          {/* Track order link */}
           <Link
             href={`/vendor/${vendor.slug}/order/track?code=${confirmationData.pickupCode}`}
             className="mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white"
@@ -226,12 +336,90 @@ export default function OrderPage() {
     )
   }
 
+  // No sessions available
+  if (!sessionsLoading && allSessions.length === 0) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center px-4">
+        <div className="max-w-md text-center">
+          <AlertTriangle className="mx-auto h-16 w-16 text-amber-400" />
+          <h1 className="mt-4 text-xl font-bold text-gray-900">No Upcoming Sessions</h1>
+          <p className="mt-2 text-sm text-gray-500">
+            {vendor.name} isn&apos;t live right now and has no upcoming scheduled sessions.
+            Follow them to get notified when they&apos;re next serving!
+          </p>
+          <Link
+            href={`/vendor/${vendor.slug}`}
+            className="mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white"
+            style={{ backgroundColor: vendor.primaryColor }}
+          >
+            Follow {vendor.name}
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <h1 className="mb-2 text-2xl font-bold text-gray-900 sm:text-3xl">Pre-Order</h1>
       <p className="mb-6 text-sm text-gray-500">
         Order ahead and pay when you collect. No payment required now.
       </p>
+
+      {/* Session selector */}
+      {sessionsLoading ? (
+        <div className="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="h-6 w-48 animate-pulse rounded bg-gray-200" />
+        </div>
+      ) : (
+        <section className="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" style={{ color: vendor.primaryColor }} />
+            Ordering for
+          </h2>
+
+          {allSessions.length === 1 ? (
+            <div
+              className="rounded-lg p-3"
+              style={{ backgroundColor: vendor.primaryColor + '10' }}
+            >
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" style={{ color: vendor.primaryColor }} />
+                <span className="text-sm font-semibold text-gray-900">
+                  {formatSessionLabel(allSessions[0])}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {allSessions.map((session, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setSelectedSessionIdx(idx)
+                    setCollectionTime('')
+                  }}
+                  className={`w-full rounded-lg border-2 p-3 text-left text-sm font-medium transition-all ${
+                    selectedSessionIdx === idx
+                      ? 'border-current bg-opacity-10'
+                      : 'border-gray-100 hover:border-gray-200'
+                  }`}
+                  style={
+                    selectedSessionIdx === idx
+                      ? { borderColor: vendor.primaryColor, backgroundColor: vendor.primaryColor + '10', color: vendor.primaryColor }
+                      : {}
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 flex-shrink-0" />
+                    <span>{formatSessionLabel(session)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Cart items */}
       <section className="mb-6 rounded-xl border border-gray-100 bg-white shadow-sm">
@@ -349,22 +537,31 @@ export default function OrderPage() {
             <label htmlFor="time" className="mb-1 block text-sm font-medium text-gray-700">
               Preferred Collection Time *
             </label>
-            <select
-              id="time"
-              required
-              value={collectionTime}
-              onChange={(e) => setCollectionTime(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-transparent focus:outline-none focus:ring-2"
-              style={{ '--tw-ring-color': vendor.primaryColor } as React.CSSProperties}
-            >
-              <option value="">Select a time</option>
-              {timeSlots.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-gray-400">You&apos;ll get an exact time slot when confirmed</p>
+            {timeSlots.length > 0 ? (
+              <select
+                id="time"
+                required
+                value={collectionTime}
+                onChange={(e) => setCollectionTime(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-4 py-3 text-sm focus:border-transparent focus:outline-none focus:ring-2"
+                style={{ '--tw-ring-color': vendor.primaryColor } as React.CSSProperties}
+              >
+                <option value="">Select a time</option>
+                {timeSlots.map((slot) => (
+                  <option key={slot.value} value={slot.value}>
+                    {slot.label}
+                  </option>
+                ))}
+              </select>
+            ) : selectedSession ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+                No time slots available for this session yet. The session may not have started or all slots are taken.
+              </div>
+            ) : (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500">
+                Select a session above to see available times.
+              </div>
+            )}
           </div>
         </section>
 
@@ -391,7 +588,7 @@ export default function OrderPage() {
 
         <button
           type="submit"
-          disabled={loading || !customerName || !collectionTime}
+          disabled={loading || !customerName || !collectionTime || !selectedSession}
           className="w-full rounded-full py-4 text-sm font-bold text-white transition-transform hover:scale-[1.01] disabled:opacity-50 disabled:hover:scale-100"
           style={{ backgroundColor: vendor.primaryColor }}
         >

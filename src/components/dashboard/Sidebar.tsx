@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   UtensilsCrossed,
   Radio,
+  Monitor,
   BarChart3,
   Calendar,
   Settings,
@@ -17,6 +18,11 @@ import {
   X,
   Share2,
   ExternalLink,
+  Truck,
+  FileCheck,
+  Wrench,
+  MessageSquare,
+  MapPin,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -28,10 +34,16 @@ type SidebarProps = {
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '', icon: LayoutDashboard },
   { label: 'Orders', href: '/orders', icon: ShoppingBag },
+  { label: 'Live KDS', href: '/live', icon: Monitor },
   { label: 'Menu', href: '/menu', icon: UtensilsCrossed },
   { label: 'Go Live', href: '/go-live', icon: Radio },
   { label: 'Schedule', href: '/schedule', icon: Calendar },
   { label: 'Social Posts', href: '/social', icon: Share2 },
+  { label: 'Fleet', href: '/fleet', icon: Truck },
+  { label: 'Documents', href: '/documents', icon: FileCheck },
+  { label: 'Maintenance', href: '/maintenance', icon: Wrench },
+  { label: 'Enquiries', href: '/enquiries', icon: MessageSquare },
+  { label: 'Journey', href: '/journey', icon: MapPin },
   { label: 'Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'Settings', href: '/settings', icon: Settings },
 ]

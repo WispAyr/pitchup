@@ -19,6 +19,7 @@ type VendorData = {
   tiktok: string | null
   twitter: string | null
   preOrderingEnabled: boolean
+  templateId: string
   isLive: boolean
   liveLocation?: { name: string; lat: number; lng: number } | null
 }

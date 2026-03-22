@@ -29,6 +29,8 @@ export default async function VendorLayout({
 
   const activeSession = vendor.liveSessions[0] || null
 
+  const templateId = (vendor as any).templateId || 'classic'
+
   const vendorData: VendorData = {
     id: vendor.id,
     slug: vendor.slug,
@@ -47,6 +49,7 @@ export default async function VendorLayout({
     tiktok: vendor.tiktok,
     twitter: vendor.twitter,
     preOrderingEnabled: vendor.preOrderingEnabled,
+    templateId,
     isLive: !!activeSession,
     liveLocation: activeSession
       ? {
@@ -60,7 +63,11 @@ export default async function VendorLayout({
   return (
     <VendorProvider vendor={vendorData}>
       <div
-        className="flex min-h-screen flex-col"
+        className={`flex min-h-screen flex-col ${
+          templateId === 'bold' ? 'bg-gray-950 text-white' :
+          templateId === 'minimal' ? 'bg-gray-50' :
+          'bg-white'
+        }`}
         style={
           {
             '--vendor-primary': vendor.primaryColor,
@@ -77,7 +84,11 @@ export default async function VendorLayout({
         )}
 
         {/* Header */}
-        <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur-sm">
+        <header className={`sticky top-0 z-30 border-b backdrop-blur-sm ${
+          templateId === 'bold'
+            ? 'border-gray-800 bg-gray-900/95'
+            : 'border-gray-100 bg-white/95'
+        }`}>
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
             <Link href="/" className="flex items-center gap-3">
               {vendor.logo ? (
@@ -95,7 +106,7 @@ export default async function VendorLayout({
                 </div>
               )}
               <div>
-                <h1 className="text-lg font-bold leading-tight text-gray-900">
+                <h1 className={`text-lg font-bold leading-tight ${templateId === 'bold' ? 'text-white' : 'text-gray-900'}`}>
                   {vendor.name}
                 </h1>
                 {vendorData.isLive && (

@@ -48,6 +48,7 @@ export default function SettingsPage() {
     primaryColor: '#F59E0B',
     secondaryColor: '#78350F',
     preOrderingEnabled: true,
+    templateId: 'classic',
   })
 
   // Password change
@@ -79,6 +80,7 @@ export default function SettingsPage() {
         primaryColor: data.primaryColor || '#F59E0B',
         secondaryColor: data.secondaryColor || '#78350F',
         preOrderingEnabled: data.preOrderingEnabled ?? true,
+        templateId: data.templateId || 'classic',
       })
     } catch (err: any) {
       setError(err.message)
@@ -119,6 +121,7 @@ export default function SettingsPage() {
           primaryColor: form.primaryColor,
           secondaryColor: form.secondaryColor,
           preOrderingEnabled: form.preOrderingEnabled,
+          templateId: form.templateId,
         }),
       })
       if (!res.ok) {
@@ -310,6 +313,33 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Site Template */}
+        <div className="rounded-xl bg-white border border-gray-100 shadow-sm p-5">
+          <h2 className="mb-4 text-lg font-bold text-gray-900">Site Template</h2>
+          <p className="mb-4 text-sm text-gray-400">Choose how your public page looks to customers.</p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'classic', name: 'Classic', desc: 'Clean, warm, food-truck feel' },
+              { id: 'bold', name: 'Bold', desc: 'Dark, punchy, high-contrast' },
+              { id: 'minimal', name: 'Minimal', desc: 'Light, spacious, modern' },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setForm({ ...form, templateId: t.id })}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${
+                  form.templateId === t.id
+                    ? 'border-amber-500 bg-amber-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-sm font-bold text-gray-900">{t.name}</div>
+                <div className="text-xs text-gray-500 mt-1">{t.desc}</div>
+              </button>
+            ))}
           </div>
         </div>
 

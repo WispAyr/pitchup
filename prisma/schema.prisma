@@ -36,6 +36,8 @@ model Vendor {
   // Slot interval in minutes
   slotIntervalMinutes Int      @default(10)
 
+  templateId      String   @default("classic")
+
   passwordHash    String
 
   createdAt       DateTime @default(now())
@@ -50,6 +52,10 @@ model Vendor {
   follows         Follow[]
   reviews         Review[]
   notifications   Notification[]
+  vehicles        Vehicle[]
+  documents       Document[]
+  maintenanceLogs MaintenanceLog[]
+  enquiries       Enquiry[]
 
   @@map("vendors")
 }
@@ -80,8 +86,9 @@ model MenuItem {
   sortOrder    Int      @default(0)
   prepTime     Int?     // minutes, overrides vendor default
 
-  vendor       Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  category     MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  vendor        Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category      MenuCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  locationMenus LocationMenu[]
 
   @@map("menu_items")
 }
@@ -95,9 +102,10 @@ model Location {
   lng       Float
   isRegular Boolean  @default(false)
 
-  vendor    Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  schedules Schedule[]
+  vendor       Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  schedules    Schedule[]
   liveSessions LiveSession[]
+  locationMenus LocationMenu[]
 
   @@map("locations")
 }
@@ -235,4 +243,104 @@ model Notification {
   customer     Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model Vehicle {
+  id           String   @id @default(cuid())
+  vendorId     String
+  name         String
+  registration String?
+  make         String?
+  model        String?
+  year         Int?
+  photo        String?
+  notes        String?  @db.Text
+  status       String   @default("active") // active, maintenance, retired
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  vendor          Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  documents       Document[]
+  maintenanceLogs MaintenanceLog[]
+
+  @@map("vehicles")
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vehicleId String?
+  category  String   // accreditation, insurance, food_hygiene, gas_safety, fire_safety, pat_testing, mot, vehicle_insurance, public_liability, council_permit, other
+  title     String
+  fileUrl   String
+  fileName  String
+  fileSize  Int
+  mimeType  String
+  expiresAt DateTime?
+  notes     String?  @db.Text
+
+  uploadedAt DateTime @default(now())
+
+  vendor  Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@map("documents")
+}
+
+model MaintenanceLog {
+  id            String   @id @default(cuid())
+  vehicleId     String
+  vendorId      String
+  type          String   // service, repair, inspection, breakdown
+  title         String
+  description   String?  @db.Text
+  cost          Int?     // in pence
+  mileage       Int?
+  performedBy   String?
+  performedAt   DateTime @default(now())
+  nextDueAt     DateTime?
+  nextDueMileage Int?
+
+  createdAt     DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vendor  Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("maintenance_logs")
+}
+
+model LocationMenu {
+  id            String   @id @default(cuid())
+  locationId    String
+  menuItemId    String
+  available     Boolean  @default(true)
+  priceOverride Int?     // in pence, null = use default
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, menuItemId])
+  @@map("location_menus")
+}
+
+model Enquiry {
+  id         String   @id @default(cuid())
+  vendorId   String
+  name       String
+  email      String
+  phone      String?
+  eventDate  DateTime?
+  eventType  String?  // wedding, corporate, festival, market, private_party, other
+  guestCount Int?
+  location   String?
+  message    String?  @db.Text
+  status     String   @default("new") // new, responded, booked, declined
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("enquiries")
 }
