@@ -9,9 +9,15 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const size = parseInt(searchParams.get('size') || '300', 10)
 
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
-    const protocol = rootDomain.includes('localhost') ? 'http' : 'https'
-    const url = `${protocol}://${params.slug}.${rootDomain}`
+    const customText = searchParams.get('text')
+    let url: string
+    if (customText) {
+      url = customText
+    } else {
+      const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
+      const protocol = rootDomain.includes('localhost') ? 'http' : 'https'
+      url = `${protocol}://${params.slug}.${rootDomain}`
+    }
 
     const qrBuffer = await QRCode.toBuffer(url, {
       width: size,

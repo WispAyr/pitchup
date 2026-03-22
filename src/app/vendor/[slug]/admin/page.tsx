@@ -1,9 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { formatPrice } from '@/lib/utils'
-import { StatsCard } from '@/components/dashboard/StatsCard'
-import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import AdminDashboardClient from './dashboard-client'
 
 export default async function AdminDashboardPage({
   params,
@@ -12,11 +11,8 @@ export default async function AdminDashboardPage({
 }) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
-    const { redirect } = require('next/navigation')
     redirect(`/auth/signin?callbackUrl=/vendor/${params.slug}/admin`)
-    return null // unreachable but satisfies TS
   }
-  const user = session!.user as any
 
   const vendor = await prisma.vendor.findUnique({
     where: { slug: params.slug },
@@ -25,178 +21,185 @@ export default async function AdminDashboardPage({
         where: { endedAt: null, cancelled: false },
         include: { location: true, vehicle: true },
       },
+      vehicles: { where: { status: 'active' } },
     },
   })
 
   if (!vendor) return null
 
+  const now = new Date()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+  const weekAgo = new Date(today)
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  const monthAgo = new Date(today)
+  monthAgo.setMonth(monthAgo.getMonth() - 1)
+  const thirtyDaysFromNow = new Date(now)
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
 
-  const [totalOrders, totalRevenue, ordersToday, followers, recentOrders, activeSession] =
-    await Promise.all([
-      prisma.order.count({
-        where: { vendorId: vendor.id, status: { not: 'cancelled' } },
-      }),
-      prisma.order.aggregate({
-        where: { vendorId: vendor.id, status: 'collected' },
-        _sum: { total: true },
-      }),
-      prisma.order.count({
-        where: {
-          vendorId: vendor.id,
-          status: { not: 'cancelled' },
-          createdAt: { gte: today },
-        },
-      }),
-      prisma.follow.count({ where: { vendorId: vendor.id } }),
-      prisma.order.findMany({
-        where: { vendorId: vendor.id },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      }),
-      Promise.resolve(vendor.liveSessions),
-    ])
+  const dayOfWeek = now.getDay()
 
-  const revenue = totalRevenue._sum.total || 0
-  const activeSessions = activeSession as any[]
+  const [
+    ordersToday, ordersWeek, ordersMonth,
+    revenueToday, revenueWeek, revenueMonth,
+    pendingPreOrders,
+    newEnquiries,
+    expiringDocs,
+    upcomingMaintenance,
+    recentOrders,
+    recentEnquiries,
+    recentRedemptions,
+    todaySchedules,
+  ] = await Promise.all([
+    prisma.order.count({ where: { vendorId: vendor.id, status: { not: 'cancelled' }, createdAt: { gte: today } } }),
+    prisma.order.count({ where: { vendorId: vendor.id, status: { not: 'cancelled' }, createdAt: { gte: weekAgo } } }),
+    prisma.order.count({ where: { vendorId: vendor.id, status: { not: 'cancelled' }, createdAt: { gte: monthAgo } } }),
+    prisma.order.aggregate({ where: { vendorId: vendor.id, status: 'collected', createdAt: { gte: today } }, _sum: { total: true } }),
+    prisma.order.aggregate({ where: { vendorId: vendor.id, status: 'collected', createdAt: { gte: weekAgo } }, _sum: { total: true } }),
+    prisma.order.aggregate({ where: { vendorId: vendor.id, status: 'collected', createdAt: { gte: monthAgo } }, _sum: { total: true } }),
+    prisma.order.findMany({
+      where: { vendorId: vendor.id, status: { in: ['pending', 'confirmed'] }, timeSlotStart: { not: null } },
+      orderBy: { timeSlotStart: 'asc' },
+      take: 10,
+    }),
+    prisma.enquiry.findMany({
+      where: { vendorId: vendor.id, status: 'new' },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+    prisma.document.findMany({
+      where: { vendorId: vendor.id, expiresAt: { lte: thirtyDaysFromNow, gte: now } },
+      include: { vehicle: true },
+      orderBy: { expiresAt: 'asc' },
+    }),
+    prisma.maintenanceLog.findMany({
+      where: { vendorId: vendor.id, nextDueAt: { lte: thirtyDaysFromNow } },
+      include: { vehicle: true },
+      orderBy: { nextDueAt: 'asc' },
+      take: 5,
+    }),
+    prisma.order.findMany({
+      where: { vendorId: vendor.id },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    }),
+    prisma.enquiry.findMany({
+      where: { vendorId: vendor.id },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }),
+    prisma.voucherRedemption.findMany({
+      where: { voucher: { vendorId: vendor.id } },
+      include: { voucher: true },
+      orderBy: { redeemedAt: 'desc' },
+      take: 5,
+    }),
+    prisma.schedule.findMany({
+      where: { vendorId: vendor.id, dayOfWeek },
+      include: { location: true },
+      orderBy: { startTime: 'asc' },
+    }),
+  ])
 
-  return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-extrabold text-gray-900">
-          Welcome back, {vendor.name}
-        </h1>
-        <p className="mt-1 text-gray-500">
-          Here&apos;s what&apos;s happening today.
-        </p>
-      </div>
+  // Calculate average order value
+  const totalCollectedMonth = revenueMonth._sum.total || 0
+  const collectedCountMonth = await prisma.order.count({
+    where: { vendorId: vendor.id, status: 'collected', createdAt: { gte: monthAgo } },
+  })
+  const avgOrderValue = collectedCountMonth > 0 ? Math.round(totalCollectedMonth / collectedCountMonth) : 0
 
-      {/* Live session status — multi-van */}
-      {activeSessions.length > 0 && (
-        <div className="mb-6 rounded-2xl border-2 border-green-200 bg-green-50 p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500" />
-              </span>
-              <span className="text-sm font-bold text-green-800">
-                {activeSessions.length} van{activeSessions.length !== 1 ? 's' : ''} LIVE
-              </span>
-            </div>
-            <Link
-              href={`/vendor/${params.slug}/admin/go-live`}
-              className="rounded-lg px-4 py-2 text-sm font-bold text-white"
-              style={{ backgroundColor: vendor.primaryColor }}
-            >
-              Manage
-            </Link>
-          </div>
-          {activeSessions.map((s: any) => (
-            <div key={s.id} className="text-xs text-green-700">
-              🚐 {s.vehicle?.name || 'Van'} at {s.location.name} since{' '}
-              {new Date(s.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          ))}
-        </div>
-      )}
+  const dashboardData = {
+    vendor: {
+      id: vendor.id,
+      name: vendor.name,
+      slug: vendor.slug,
+      primaryColor: vendor.primaryColor,
+      secondaryColor: vendor.secondaryColor,
+      logo: vendor.logo,
+    },
+    liveSessions: vendor.liveSessions.map((s: any) => ({
+      id: s.id,
+      vehicleName: s.vehicle?.name || 'Van',
+      vehicleId: s.vehicleId,
+      locationName: s.location.name,
+      startedAt: s.startedAt.toISOString(),
+    })),
+    vehicles: vendor.vehicles.map((v: any) => ({
+      id: v.id,
+      name: v.name,
+    })),
+    metrics: {
+      ordersToday,
+      ordersWeek,
+      ordersMonth,
+      revenueToday: revenueToday._sum.total || 0,
+      revenueWeek: revenueWeek._sum.total || 0,
+      revenueMonth: revenueMonth._sum.total || 0,
+      avgOrderValue,
+      pendingPreOrders: pendingPreOrders.length,
+    },
+    pendingPreOrders: pendingPreOrders.map((o) => ({
+      id: o.id,
+      customerName: o.customerName,
+      total: o.total,
+      pickupCode: o.pickupCode,
+      timeSlotStart: o.timeSlotStart?.toISOString() || null,
+      status: o.status,
+    })),
+    newEnquiries: newEnquiries.map((e) => ({
+      id: e.id,
+      name: e.name,
+      eventType: e.eventType,
+      message: e.message?.slice(0, 100) || '',
+      createdAt: e.createdAt.toISOString(),
+    })),
+    expiringDocs: expiringDocs.map((d) => ({
+      id: d.id,
+      title: d.title,
+      category: d.category,
+      vehicleName: d.vehicle?.name || null,
+      expiresAt: d.expiresAt?.toISOString() || null,
+    })),
+    upcomingMaintenance: upcomingMaintenance.map((m) => ({
+      id: m.id,
+      title: m.title,
+      vehicleName: m.vehicle.name,
+      nextDueAt: m.nextDueAt?.toISOString() || null,
+      type: m.type,
+    })),
+    recentActivity: [
+      ...recentOrders.map((o) => ({
+        type: 'order' as const,
+        id: o.id,
+        title: `Order ${o.pickupCode || '#' + o.id.slice(-4)}`,
+        subtitle: `${o.customerName} — £${(o.total / 100).toFixed(2)}`,
+        status: o.status,
+        timestamp: o.createdAt.toISOString(),
+      })),
+      ...recentEnquiries.map((e) => ({
+        type: 'enquiry' as const,
+        id: e.id,
+        title: `Enquiry from ${e.name}`,
+        subtitle: e.eventType || 'General',
+        status: e.status,
+        timestamp: e.createdAt.toISOString(),
+      })),
+      ...recentRedemptions.map((r) => ({
+        type: 'voucher' as const,
+        id: r.id,
+        title: `Voucher ${r.voucher.code} redeemed`,
+        subtitle: r.voucher.description,
+        status: 'redeemed',
+        timestamp: r.redeemedAt.toISOString(),
+      })),
+    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 15),
+    todaySchedules: todaySchedules.map((s) => ({
+      id: s.id,
+      locationName: s.location.name,
+      startTime: s.startTime,
+      endTime: s.endTime,
+    })),
+  }
 
-      {/* Stats cards */}
-      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatsCard title="Total Orders" value={totalOrders} accentColor={vendor.primaryColor} />
-        <StatsCard title="Revenue" value={formatPrice(revenue)} subtitle="Collected" accentColor={vendor.primaryColor} />
-        <StatsCard title="Orders Today" value={ordersToday} accentColor={vendor.primaryColor} />
-        <StatsCard title="Followers" value={followers} accentColor={vendor.primaryColor} />
-      </div>
-
-      {/* Quick actions */}
-      {activeSessions.length === 0 && (
-        <div className="mb-8">
-          <Link
-            href={`/vendor/${params.slug}/admin/go-live`}
-            className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: vendor.primaryColor }}
-          >
-            🔴 Go Live
-          </Link>
-        </div>
-      )}
-
-      {/* Recent orders */}
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">Recent Orders</h2>
-          <Link
-            href={`/vendor/${params.slug}/admin/orders`}
-            className="text-sm font-medium hover:underline"
-            style={{ color: vendor.primaryColor }}
-          >
-            View all →
-          </Link>
-        </div>
-
-        {recentOrders.length === 0 ? (
-          <div className="rounded-xl border border-gray-100 bg-white p-8 text-center shadow-sm">
-            <p className="text-gray-500">No orders yet. Go live to start receiving orders!</p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-100 text-left text-xs font-medium uppercase text-gray-500">
-                  <th className="px-4 py-3">Code</th>
-                  <th className="px-4 py-3">Customer</th>
-                  <th className="px-4 py-3">Total</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {recentOrders.map((order) => (
-                  <tr key={order.id} className="text-sm">
-                    <td className="px-4 py-3">
-                      {order.pickupCode ? (
-                        <span className="rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-mono font-bold text-white">
-                          {order.pickupCode}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{order.customerName}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{formatPrice(order.total)}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          order.status === 'confirmed'
-                            ? 'bg-blue-100 text-blue-700'
-                            : order.status === 'preparing'
-                            ? 'bg-amber-100 text-amber-700'
-                            : order.status === 'ready'
-                            ? 'bg-green-100 text-green-700'
-                            : order.status === 'collected'
-                            ? 'bg-gray-100 text-gray-600'
-                            : order.status === 'no-show'
-                            ? 'bg-orange-100 text-orange-700'
-                            : order.status === 'cancelled'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  return <AdminDashboardClient data={dashboardData} />
 }

@@ -26,6 +26,11 @@ function generateCode(length = 8): string {
   return code
 }
 
+function generatePrefixedCode(slug: string): string {
+  const prefix = slug.slice(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X')
+  return `${prefix}-${generateCode(4)}`
+}
+
 export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
   const session = await getServerSession(authOptions)
   if (!session?.user || (session.user as any).vendorSlug !== params.slug)
@@ -35,9 +40,44 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   if (!vendor) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json()
+  const batchCount = body.batch ? Math.min(parseInt(body.batch), 100) : 0
+
+  if (batchCount > 1) {
+    // Batch creation
+    const vouchers = []
+    for (let i = 0; i < batchCount; i++) {
+      let code: string
+      let attempts = 0
+      do {
+        code = generatePrefixedCode(params.slug)
+        attempts++
+      } while (attempts < 10 && await prisma.voucher.findUnique({ where: { code } }))
+
+      vouchers.push({
+        vendorId: vendor.id,
+        code,
+        type: body.type,
+        value: body.value ? parseFloat(body.value) : null,
+        freeItemId: body.freeItemId || null,
+        description: body.description,
+        minOrder: body.minOrder ? parseFloat(body.minOrder) : null,
+        maxUses: body.maxUses ? parseInt(body.maxUses) : null,
+        maxUsesPerCustomer: body.maxUsesPerCustomer ? parseInt(body.maxUsesPerCustomer) : null,
+        validFrom: body.validFrom ? new Date(body.validFrom) : new Date(),
+        expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+        isActive: true,
+        applicableTo: body.applicableTo || 'all',
+        giftCardBalance: body.type === 'giftCard' && body.value ? parseFloat(body.value) * 100 : null,
+      })
+    }
+
+    const result = await prisma.voucher.createMany({ data: vouchers })
+    return NextResponse.json({ created: result.count }, { status: 201 })
+  }
+
+  // Single creation
   const code = body.code?.trim().toUpperCase() || generateCode()
 
-  // Check uniqueness
   const existing = await prisma.voucher.findUnique({ where: { code } })
   if (existing) return NextResponse.json({ error: 'Code already exists' }, { status: 409 })
 
@@ -56,7 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
       isActive: body.isActive ?? true,
       applicableTo: body.applicableTo || 'all',
-      giftCardBalance: body.type === 'giftCard' && body.value ? parseFloat(body.value) : null,
+      giftCardBalance: body.type === 'giftCard' && body.value ? parseFloat(body.value) * 100 : null,
     },
   })
   return NextResponse.json(voucher, { status: 201 })
