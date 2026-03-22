@@ -64,12 +64,28 @@ export async function PATCH(
       'secondaryColor',
       'preOrderingEnabled',
       'templateId',
+      'customDomain',
     ] as const
 
     const updateData: Record<string, any> = {}
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updateData[field] = body[field]
+      }
+    }
+
+    // When custom domain changes, reset status to pending
+    if (updateData.customDomain !== undefined) {
+      if (updateData.customDomain) {
+        // Clean domain — strip protocol and trailing slashes
+        updateData.customDomain = updateData.customDomain
+          .replace(/^https?:\/\//, '')
+          .replace(/\/+$/, '')
+          .toLowerCase()
+        updateData.domainStatus = 'pending'
+      } else {
+        updateData.customDomain = null
+        updateData.domainStatus = null
       }
     }
 
@@ -107,6 +123,8 @@ export async function PATCH(
         stripeAccountId: true,
         stripeOnboarded: true,
         templateId: true,
+        customDomain: true,
+        domainStatus: true,
       },
     })
 

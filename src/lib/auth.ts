@@ -3,6 +3,10 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
+// Hardcoded platform admin credentials
+const PLATFORM_ADMIN_EMAIL = 'admin@pitchup.local-connect.uk'
+const PLATFORM_ADMIN_PASSWORD = 'PitchUpAdmin2026!'
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -14,6 +18,20 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
+
+        // Check platform admin first
+        if (
+          credentials.email === PLATFORM_ADMIN_EMAIL &&
+          credentials.password === PLATFORM_ADMIN_PASSWORD
+        ) {
+          return {
+            id: 'platform-admin',
+            email: PLATFORM_ADMIN_EMAIL,
+            name: 'Platform Admin',
+            role: 'admin',
+            vendorSlug: null,
+          }
+        }
 
         const vendor = await prisma.vendor.findFirst({
           where: { email: credentials.email },

@@ -11,6 +11,11 @@ export default async function AdminDashboardPage({
   params: { slug: string }
 }) {
   const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    const { redirect } = require('next/navigation')
+    redirect(`/auth/signin?callbackUrl=/vendor/${params.slug}/admin`)
+    return null // unreachable but satisfies TS
+  }
   const user = session!.user as any
 
   const vendor = await prisma.vendor.findUnique({

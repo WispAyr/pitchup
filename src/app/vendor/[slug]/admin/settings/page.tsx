@@ -49,7 +49,12 @@ export default function SettingsPage() {
     secondaryColor: '#78350F',
     preOrderingEnabled: true,
     templateId: 'classic',
+    customDomain: '',
   })
+  const [domainStatus, setDomainStatus] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(false)
+  const [domainMessage, setDomainMessage] = useState('')
+  const [copied, setCopied] = useState(false)
 
   // Password change
   const [passwordForm, setPasswordForm] = useState({
@@ -81,7 +86,9 @@ export default function SettingsPage() {
         secondaryColor: data.secondaryColor || '#78350F',
         preOrderingEnabled: data.preOrderingEnabled ?? true,
         templateId: data.templateId || 'classic',
+        customDomain: data.customDomain || '',
       })
+      setDomainStatus(data.domainStatus || null)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -122,6 +129,7 @@ export default function SettingsPage() {
           secondaryColor: form.secondaryColor,
           preOrderingEnabled: form.preOrderingEnabled,
           templateId: form.templateId,
+          customDomain: form.customDomain.trim() || null,
         }),
       })
       if (!res.ok) {
@@ -434,6 +442,80 @@ export default function SettingsPage() {
               </a>
             </div>
           )}
+        </div>
+
+        {/* Custom Domain */}
+        <div className="rounded-xl bg-white border border-gray-100 shadow-sm p-5">
+          <h2 className="mb-4 text-lg font-bold text-gray-900">Custom Domain</h2>
+          <p className="mb-3 text-sm text-gray-400">
+            Use your own domain name instead of a PitchUp subdomain.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-400">Your Domain</label>
+              <input
+                type="text"
+                value={form.customDomain}
+                onChange={(e) => setForm({ ...form, customDomain: e.target.value })}
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder-gray-500 focus:border-amber-400 focus:outline-none"
+                placeholder="www.yourdomain.co.uk"
+              />
+            </div>
+            {domainStatus && (
+              <div className="flex items-center gap-2">
+                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  domainStatus === 'active' ? 'bg-green-50 text-green-600 border border-green-200' :
+                  domainStatus === 'verified' ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                  'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                }`}>
+                  {domainStatus.charAt(0).toUpperCase() + domainStatus.slice(1)}
+                </span>
+                {domainStatus !== 'active' && (
+                  <button
+                    type="button"
+                    disabled={verifying}
+                    onClick={async () => {
+                      setVerifying(true)
+                      setDomainMessage('')
+                      try {
+                        const res = await fetch(`/api/vendor/${slug}/verify-domain`, { method: 'POST' })
+                        const data = await res.json()
+                        setDomainMessage(data.message || data.error)
+                        if (data.status === 'verified') setDomainStatus('verified')
+                      } catch { setDomainMessage('Verification failed') }
+                      setVerifying(false)
+                    }}
+                    className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-100"
+                  >
+                    {verifying ? 'Checking...' : 'Verify DNS'}
+                  </button>
+                )}
+              </div>
+            )}
+            {domainMessage && (
+              <p className="text-xs text-gray-500">{domainMessage}</p>
+            )}
+            <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+              <p className="text-xs font-medium text-gray-500 mb-1">Setup Instructions:</p>
+              <p className="text-xs text-gray-400 mb-2">Add a CNAME record pointing your domain to:</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded bg-gray-100 px-2 py-1 text-xs font-mono text-gray-700">
+                  pitchup.local-connect.uk
+                </code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText('pitchup.local-connect.uk')
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                  className="rounded bg-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-300"
+                >
+                  {copied ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* QR Code */}

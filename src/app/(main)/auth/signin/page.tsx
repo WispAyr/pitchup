@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -29,7 +29,16 @@ export default function SignInPage() {
       if (result?.error) {
         setError('Invalid email or password. Please try again.')
       } else {
-        router.push(role === 'vendor' ? '/dashboard' : '/')
+        // Fetch session to get role and slug for proper redirect
+        const session = await getSession()
+        const user = session?.user as any
+        if (user?.role === 'admin') {
+          router.push('/admin')
+        } else if (user?.role === 'vendor' && user?.vendorSlug) {
+          router.push(`/vendor/${user.vendorSlug}/admin`)
+        } else {
+          router.push('/discover')
+        }
         router.refresh()
       }
     } catch {

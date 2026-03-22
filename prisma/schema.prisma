@@ -38,6 +38,9 @@ model Vendor {
 
   templateId      String   @default("classic")
 
+  customDomain    String?  @unique
+  domainStatus    String?  // pending, verified, active
+
   passwordHash    String
 
   createdAt       DateTime @default(now())
