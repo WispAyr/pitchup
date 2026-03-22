@@ -18,7 +18,7 @@ type ScheduleEntry = {
   id: string
   startTime: string
   endTime: string
-  locationName: string
+  locationName: string; locationAddress?: string | null
   lat: number
   lng: number
 }
@@ -41,14 +41,14 @@ type RouteData = {
   name: string
   dayOfWeek: number
   vehicleName: string | null
-  stops: { id: string; locationName: string; startTime: string; endTime: string; lat: number; lng: number }[]
+  stops: { id: string; locationName: string; locationAddress?: string | null; startTime: string; endTime: string; lat: number; lng: number }[]
 }
 
 type Props = {
   schedulesByDay: DaySchedule[]
   locations: LocationMarker[]
   routes?: RouteData[]
-  activeSession: { locationName: string; lat: number; lng: number } | null
+  activeSession: { locationName: string; locationAddress?: string | null; lat: number; lng: number } | null
 }
 
 function formatTime(t: string) {
@@ -129,7 +129,7 @@ export function SchedulePageClient({ schedulesByDay, locations, routes = [], act
                       {route.stops.map(stop => (
                         <div key={stop.id} className="flex items-center gap-2 text-sm">
                           <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
-                          <span className="text-gray-600">{stop.locationName}</span>
+                          <span className="text-gray-600">{stop.locationName}</span>{stop.locationAddress && <span className="text-xs text-gray-400 block">{stop.locationAddress}</span>}
                           <span className="text-gray-400">—</span>
                           <span className="font-medium text-gray-700">{formatTime(stop.startTime)}-{formatTime(stop.endTime)}</span>
                         </div>
@@ -146,7 +146,7 @@ export function SchedulePageClient({ schedulesByDay, locations, routes = [], act
                         <Clock className="h-4 w-4 flex-shrink-0 text-gray-400" />
                         <span className="font-medium text-gray-700">{entry.startTime} - {entry.endTime}</span>
                         <MapPin className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                        <span className="text-gray-600">{entry.locationName}</span>
+                        <span className="text-gray-600">{entry.locationName}</span>{entry.locationAddress && <span className="text-xs text-gray-400 block">{entry.locationAddress}</span>}
                       </div>
                     ))}
                   </div>
@@ -192,7 +192,7 @@ export function SchedulePageClient({ schedulesByDay, locations, routes = [], act
                         <Clock className="h-4 w-4 flex-shrink-0 text-gray-400" />
                         <span className="font-medium text-gray-700">{entry.startTime} - {entry.endTime}</span>
                         <MapPin className="h-4 w-4 flex-shrink-0 text-gray-400" />
-                        <span className="text-gray-600">{entry.locationName}</span>
+                        <span className="text-gray-600">{entry.locationName}</span>{entry.locationAddress && <span className="text-xs text-gray-400 block">{entry.locationAddress}</span>}
                       </div>
                     ))}
                   </div>

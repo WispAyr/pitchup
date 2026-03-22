@@ -106,6 +106,12 @@ export default function OrderPage() {
   } | null>(null)
   const [mounted, setMounted] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [voucherCode, setVoucherCode] = useState('')
+  const [voucherApplied, setVoucherApplied] = useState<{
+    id: string; code: string; type: string; description: string; discount: number; discountDescription: string
+  } | null>(null)
+  const [voucherError, setVoucherError] = useState('')
+  const [voucherLoading, setVoucherLoading] = useState(false)
 
   // Session/schedule data
   const [sessionsData, setSessionsData] = useState<SessionsResponse | null>(null)
@@ -164,7 +170,32 @@ export default function OrderPage() {
 
   const isOurCart = cart.vendorSlug === vendor.slug
   const items = isOurCart ? cart.items : []
-  const total = isOurCart ? cart.total() : 0
+  const subtotal = isOurCart ? cart.total() : 0
+  const discount = voucherApplied?.discount || 0
+  const total = Math.max(0, subtotal - discount)
+
+  async function applyVoucher() {
+    if (!voucherCode.trim()) return
+    setVoucherLoading(true); setVoucherError('')
+    try {
+      const res = await fetch(`/api/vendor/${vendor.slug}/vouchers/validate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: voucherCode, orderTotal: subtotal }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setVoucherError(data.error); setVoucherApplied(null); return }
+      setVoucherApplied({
+        id: data.voucher.id, code: data.voucher.code, type: data.voucher.type,
+        description: data.voucher.description, discount: data.discount,
+        discountDescription: data.discountDescription,
+      })
+    } catch { setVoucherError('Failed to validate voucher') }
+    finally { setVoucherLoading(false) }
+  }
+
+  function removeVoucher() {
+    setVoucherApplied(null); setVoucherCode(''); setVoucherError('')
+  }
 
   const handleCopyCode = () => {
     if (confirmationData?.pickupCode) {
@@ -193,8 +224,9 @@ export default function OrderPage() {
             price: i.price,
             quantity: i.quantity,
           })),
-          subtotal: total,
+          subtotal,
           total,
+          voucherId: voucherApplied?.id || undefined,
           customerName,
           customerPhone: customerPhone || undefined,
           customerEmail: customerEmail || undefined,
@@ -471,14 +503,24 @@ export default function OrderPage() {
           ))}
         </div>
 
-        <div className="border-t border-gray-100 px-4 py-3">
+        <div className="border-t border-gray-100 px-4 py-3 space-y-1">
           <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Subtotal</span>
+            <span className="text-sm font-semibold text-gray-700">{formatPrice(subtotal)}</span>
+          </div>
+          {voucherApplied && discount > 0 && (
+            <div className="flex items-center justify-between text-green-600">
+              <span className="text-sm">Discount ({voucherApplied.code})</span>
+              <span className="text-sm font-semibold">-{formatPrice(discount)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between pt-1 border-t border-gray-50">
             <span className="font-semibold text-gray-900">Total</span>
             <span className="text-lg font-bold" style={{ color: vendor.primaryColor }}>
               {formatPrice(total)}
             </span>
           </div>
-          <p className="text-xs text-gray-400 mt-1">Pay on collection — cash or card accepted</p>
+          <p className="text-xs text-gray-400">Pay on collection — cash or card accepted</p>
         </div>
       </section>
 
@@ -563,6 +605,32 @@ export default function OrderPage() {
               </div>
             )}
           </div>
+        </section>
+
+        {/* Voucher code */}
+        <section className="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-gray-700 mb-3">🎟️ Have a voucher code?</h2>
+          {voucherApplied ? (
+            <div className="flex items-center justify-between rounded-lg bg-green-50 border border-green-200 p-3">
+              <div>
+                <span className="font-mono font-bold text-green-800">{voucherApplied.code}</span>
+                <span className="ml-2 text-sm text-green-700">{voucherApplied.discountDescription}</span>
+              </div>
+              <button onClick={removeVoucher} className="text-sm font-bold text-red-500 hover:text-red-700">Remove</button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input type="text" value={voucherCode} onChange={e => setVoucherCode(e.target.value.toUpperCase())}
+                className="flex-1 rounded-lg border border-gray-200 px-4 py-3 text-sm font-mono uppercase"
+                placeholder="Enter code" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), applyVoucher())} />
+              <button onClick={applyVoucher} disabled={voucherLoading || !voucherCode.trim()}
+                className="rounded-lg px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
+                style={{ backgroundColor: vendor.primaryColor }}>
+                {voucherLoading ? '...' : 'Apply'}
+              </button>
+            </div>
+          )}
+          {voucherError && <p className="mt-2 text-sm text-red-600">{voucherError}</p>}
         </section>
 
         {/* Pay on collection info */}

@@ -62,15 +62,33 @@ export function useMapSetup({
     mapRef.current?.flyTo({ center: [lng, lat], zoom: z ?? 14, duration: 1200 })
   }, [])
 
-  const fitBounds = useCallback((coords: [number, number][], padding = 60) => {
+  const fitBounds = useCallback((coords: [number, number][], padding = 60, lockBounds = true) => {
     if (!mapRef.current || coords.length === 0) return
     if (coords.length === 1) {
       mapRef.current.flyTo({ center: coords[0], zoom: 14, duration: 1200 })
+      if (lockBounds) {
+        const b = new maplibregl.LngLatBounds(coords[0], coords[0])
+        b.extend([coords[0][0] - 0.05, coords[0][1] - 0.05])
+        b.extend([coords[0][0] + 0.05, coords[0][1] + 0.05])
+        mapRef.current.setMaxBounds(b)
+      }
       return
     }
     const bounds = new maplibregl.LngLatBounds(coords[0], coords[0])
     coords.forEach((c) => bounds.extend(c))
     mapRef.current.fitBounds(bounds, { padding, duration: 1200, maxZoom: 15 })
+    if (lockBounds) {
+      // Add some padding to the max bounds so users can pan slightly but not scroll to the whole UK
+      const ne = bounds.getNorthEast()
+      const sw = bounds.getSouthWest()
+      const lngPad = (ne.lng - sw.lng) * 0.3
+      const latPad = (ne.lat - sw.lat) * 0.3
+      const maxBounds = new maplibregl.LngLatBounds(
+        [sw.lng - lngPad, sw.lat - latPad],
+        [ne.lng + lngPad, ne.lat + latPad]
+      )
+      mapRef.current.setMaxBounds(maxBounds)
+    }
   }, [])
 
   return { map: mapRef, ready, flyTo, fitBounds }

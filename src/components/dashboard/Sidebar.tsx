@@ -26,6 +26,8 @@ import {
   Image,
   Route,
   PartyPopper,
+  Ticket,
+  Flame,
 } from 'lucide-react'
 
 type SidebarProps = {
@@ -43,6 +45,8 @@ const NAV_ITEMS = [
   { label: 'Schedule', href: '/schedule', icon: Calendar },
   { label: 'Routes', href: '/routes', icon: Route },
   { label: 'Events', href: '/events', icon: PartyPopper },
+  { label: 'Vouchers', href: '/vouchers', icon: Ticket },
+  { label: 'Deals', href: '/deals', icon: Flame },
   { label: 'Gallery', href: '/gallery', icon: Image },
   { label: 'Social Posts', href: '/social', icon: Share2 },
   { label: 'Fleet', href: '/fleet', icon: Truck },

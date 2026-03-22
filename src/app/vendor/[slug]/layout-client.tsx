@@ -26,6 +26,7 @@ export function VendorLayoutClient({ preOrderingEnabled, primaryColor }: Props) 
     { href: '/menu', label: 'Menu', emoji: '🍔' },
     { href: '/schedule', label: 'Schedule', emoji: '📅' },
     { href: '/events', label: 'Events', emoji: '🎪' },
+    { href: '/deals', label: 'Deals', emoji: '🔥' },
     { href: '/about', label: 'About', emoji: 'ℹ️' },
     { href: '/gallery', label: 'Gallery', emoji: '📸' },
     { href: '/enquire', label: 'Enquire', emoji: '💬' },

@@ -48,15 +48,16 @@ export default async function SchedulePage({
         startTime: s.startTime,
         endTime: s.endTime,
         locationName: s.location.name,
+        locationAddress: s.location.address,
         lat: s.location.lat,
         lng: s.location.lng,
       })),
   }))
 
   // Collect all unique locations from schedules + routes
-  const locMap = new Map<string, { id: string; name: string; lat: number; lng: number }>()
-  vendor.schedules.forEach((s) => locMap.set(s.location.id, { id: s.location.id, name: s.location.name, lat: s.location.lat, lng: s.location.lng }))
-  vendor.routes.forEach((r) => r.stops.forEach((s) => locMap.set(s.location.id, { id: s.location.id, name: s.location.name, lat: s.location.lat, lng: s.location.lng })))
+  const locMap = new Map<string, { id: string; name: string; address: string | null; lat: number; lng: number }>()
+  vendor.schedules.forEach((s) => locMap.set(s.location.id, { id: s.location.id, name: s.location.name, address: s.location.address, lat: s.location.lat, lng: s.location.lng }))
+  vendor.routes.forEach((r) => r.stops.forEach((s) => locMap.set(s.location.id, { id: s.location.id, name: s.location.name, address: s.location.address, lat: s.location.lat, lng: s.location.lng })))
   const locations = Array.from(locMap.values())
 
   const routesByDay = vendor.routes.map((r) => ({
@@ -67,6 +68,7 @@ export default async function SchedulePage({
     stops: r.stops.map((s) => ({
       id: s.id,
       locationName: s.location.name,
+      locationAddress: s.location.address,
       startTime: s.startTime,
       endTime: s.endTime,
       lat: s.location.lat,

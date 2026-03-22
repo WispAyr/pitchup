@@ -67,8 +67,69 @@ model Vendor {
   media           VendorMedia[]
   routes          Route[]
   events          Event[]
+  vouchers        Voucher[]
+  deals           Deal[]
 
   @@map("vendors")
+}
+
+model Voucher {
+  id                 String    @id @default(cuid())
+  vendorId           String
+  vendor             Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  code               String    @unique
+  type               String    // percentage, fixed, freeItem, buyOneGetOne, giftCard
+  value              Float?
+  freeItemId         String?
+  description        String
+  minOrder           Float?    // in pence
+  maxUses            Int?
+  usesCount          Int       @default(0)
+  maxUsesPerCustomer Int?
+  validFrom          DateTime  @default(now())
+  expiresAt          DateTime?
+  isActive           Boolean   @default(true)
+  applicableTo       String?   // JSON: "all", category, menuItemIds
+  giftCardBalance    Float?    // remaining balance in pence for giftCard type
+  createdAt          DateTime  @default(now())
+  redemptions        VoucherRedemption[]
+
+  @@map("vouchers")
+}
+
+model VoucherRedemption {
+  id         String   @id @default(cuid())
+  voucherId  String
+  voucher    Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  orderId    String?
+  customerId String?
+  amount     Float?   // amount deducted (for gift cards)
+  redeemedAt DateTime @default(now())
+
+  @@map("voucher_redemptions")
+}
+
+model Deal {
+  id          String    @id @default(cuid())
+  vendorId    String
+  vendor      Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  title       String
+  description String    @db.Text
+  type        String    // bundle, happyHour, daySpecial, event
+  price       Float?    // in pence
+  savings     String?
+  imageUrl    String?
+  items       String?   // JSON array of menuItem ids
+  validDays   String?   // JSON array of day numbers
+  validFrom   String?   // time "16:00"
+  validTo     String?   // time "18:00"
+  startDate   DateTime?
+  endDate     DateTime?
+  isFeatured  Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@map("deals")
 }
 
 model MenuCategory {

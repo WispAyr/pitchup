@@ -4,6 +4,7 @@ import { formatPrice } from '@/lib/utils'
 import { MapPin, Clock, ArrowRight, Calendar, ChevronRight, Star } from 'lucide-react'
 import { VendorHomeClient } from './page-client'
 import { VendorMapSection } from './vendor-map-section'
+import { DealsSection } from './deals-section'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -203,6 +204,9 @@ export default async function VendorHomePage({
             ))}
           </section>
         )}
+
+        {/* ═══ Deals ═══ */}
+        <DealsSection vendorSlug={vendor.slug} primaryColor={vendor.primaryColor} />
 
         {/* ═══ Menu Preview ═══ */}
         {vendor.menuItems.length > 0 && (
