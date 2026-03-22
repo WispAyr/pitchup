@@ -29,7 +29,7 @@ export function VendorLayoutClient({ preOrderingEnabled, primaryColor }: Props) 
     { href: '/deals', label: 'Deals', emoji: '🔥' },
     { href: '/about', label: 'About', emoji: 'ℹ️' },
     { href: '/gallery', label: 'Gallery', emoji: '📸' },
-    { href: '/enquire', label: 'Enquire', emoji: '💬' },
+    { href: '/contact', label: 'Contact', emoji: '💬' },
   ]
 
   return (

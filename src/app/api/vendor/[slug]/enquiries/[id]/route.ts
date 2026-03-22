@@ -9,9 +9,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { slug: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
+  const data: any = {}
+  if (body.status) data.status = body.status
+  if (body.staffNotes !== undefined) data.staffNotes = body.staffNotes
   const enquiry = await prisma.enquiry.update({
     where: { id: params.id },
-    data: { status: body.status },
+    data,
   })
   return NextResponse.json(enquiry)
 }

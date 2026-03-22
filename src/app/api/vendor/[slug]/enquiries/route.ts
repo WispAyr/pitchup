@@ -31,6 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   const enquiry = await prisma.enquiry.create({
     data: {
       vendorId: vendor.id,
+      enquiryType: body.enquiryType || 'general',
       name: body.name,
       email: body.email,
       phone: body.phone || null,
@@ -38,6 +39,10 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       eventType: body.eventType || null,
       guestCount: body.guestCount ? parseInt(body.guestCount) : null,
       location: body.location || null,
+      budget: body.budget || null,
+      dietary: body.dietary || null,
+      outlet: body.outlet || null,
+      deadline: body.deadline ? new Date(body.deadline) : null,
       message: body.message || null,
     },
   })
