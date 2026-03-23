@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Calendar, Clock, ExternalLink } from 'lucide-react'
+import { MapPin, Calendar, ExternalLink } from 'lucide-react'
 
 type EventData = {
   id: string
@@ -54,102 +54,129 @@ export default function EventsPage() {
     return s.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   }
 
+  function getDateBadge(dateStr: string) {
+    const d = new Date(dateStr)
+    return {
+      day: d.getDate(),
+      month: d.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase(),
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-100">
-        <div className="mx-auto max-w-7xl px-5 py-8">
-          <h1 className="text-3xl font-extrabold text-gray-900">🎪 Events</h1>
-          <p className="mt-1 text-gray-500">Festivals, airshows, markets — find your next food stop.</p>
+    <div className="min-h-screen bg-warm-900">
+      {/* Hero */}
+      <div className="relative overflow-hidden border-b border-warm-800">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(245,158,11,0.1),_transparent_60%)]" />
+        <div className="relative mx-auto max-w-7xl px-5 py-10 sm:py-14">
+          <h1 className="text-3xl font-extrabold text-white sm:text-4xl">Events</h1>
+          <p className="mt-2 text-warm-400">Festivals, airshows, markets — find your next food stop.</p>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-5 py-8">
         {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => <div key={i} className="skeleton h-40 w-full rounded-2xl" />)}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {[1, 2, 3, 4].map(i => <div key={i} className="skeleton-dark h-48 w-full rounded-2xl" />)}
           </div>
         ) : events.length === 0 ? (
           <div className="flex min-h-[40vh] items-center justify-center">
             <div className="text-center">
               <p className="text-5xl mb-4">🎪</p>
-              <h2 className="text-xl font-bold text-gray-900">No upcoming events</h2>
-              <p className="mt-1 text-gray-500">Check back soon for festivals, markets, and more.</p>
+              <h2 className="text-xl font-bold text-white">No upcoming events</h2>
+              <p className="mt-1 text-warm-400">Check back soon for festivals, markets, and more.</p>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {events.map((event) => {
-              const isLive = now >= new Date(event.startDate) && now <= new Date(event.endDate)
-              return (
-                <div
-                  key={event.id}
-                  className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${isLive ? 'border-2 ring-1 ring-opacity-20' : 'border-gray-100'}`}
-                  style={isLive ? { borderColor: event.vendor.primaryColor, ringColor: event.vendor.primaryColor } : {}}
-                >
-                  {/* Vendor brand bar */}
-                  <div className="h-1.5" style={{ backgroundColor: event.vendor.primaryColor }} />
+          <>
+            {/* Coming Up heading */}
+            <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-warm-300">
+              <Calendar className="h-5 w-5 text-brand-400" />
+              Coming Up
+            </h2>
 
-                  {event.imageUrl && (
-                    <img src={event.imageUrl} alt={event.name} className="h-40 w-full object-cover" loading="lazy" />
-                  )}
-
-                  <div className="p-5">
-                    {isLive && (
-                      <div className="mb-2 flex items-center gap-2">
-                        <span className="relative flex h-2 w-2">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-                        </span>
-                        <span className="text-xs font-bold text-green-700">HAPPENING NOW</span>
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {events.map((event) => {
+                const isLive = now >= new Date(event.startDate) && now <= new Date(event.endDate)
+                const dateBadge = getDateBadge(event.startDate)
+                return (
+                  <div
+                    key={event.id}
+                    className={`overflow-hidden rounded-2xl border transition-all ${
+                      isLive
+                        ? 'border-brand-500/40 bg-warm-800 ring-1 ring-brand-500/20'
+                        : 'border-warm-800 bg-warm-800/50 hover:border-warm-700'
+                    }`}
+                  >
+                    <div className="flex">
+                      {/* Date badge */}
+                      <div className="flex w-20 shrink-0 flex-col items-center justify-center border-r border-warm-700/50 bg-warm-900/50 p-4">
+                        <span className="text-2xl font-extrabold text-brand-400">{dateBadge.day}</span>
+                        <span className="text-xs font-bold text-warm-400">{dateBadge.month}</span>
                       </div>
-                    )}
 
-                    <h3 className="text-lg font-extrabold text-gray-900">{event.name}</h3>
-
-                    <div className="mt-2 space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <MapPin className="h-3.5 w-3.5 shrink-0" />
-                        {event.location}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Calendar className="h-3.5 w-3.5 shrink-0" />
-                        {formatDateRange(event.startDate, event.endDate, event.isMultiDay)}
-                      </div>
-                    </div>
-
-                    {event.description && (
-                      <p className="mt-2 text-sm text-gray-600 line-clamp-2">{event.description}</p>
-                    )}
-
-                    {/* Vendor link */}
-                    <div className="mt-4 flex items-center justify-between">
-                      <Link
-                        href={`${protocol}://${event.vendor.slug}.${rootDomain}`}
-                        target="_blank"
-                        className="flex items-center gap-2"
-                      >
-                        {event.vendor.logo ? (
-                          <img src={event.vendor.logo} alt="" className="h-7 w-7 rounded-full object-cover" />
-                        ) : (
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: event.vendor.primaryColor }}>
-                            {event.vendor.name.charAt(0)}
+                      <div className="flex-1 p-5">
+                        {isLive && (
+                          <div className="mb-2 flex items-center gap-2">
+                            <span className="relative flex h-2 w-2">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                            </span>
+                            <span className="text-xs font-bold text-red-400">HAPPENING NOW</span>
                           </div>
                         )}
-                        <span className="text-sm font-bold text-gray-900">{event.vendor.name}</span>
-                        <ExternalLink className="h-3 w-3 text-gray-400" />
-                      </Link>
 
-                      {event.vehicle && (
-                        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-500">
-                          🚐 {event.vehicle.name}
-                        </span>
-                      )}
+                        <h3 className="text-lg font-extrabold text-white">{event.name}</h3>
+
+                        <div className="mt-2 space-y-1">
+                          <div className="flex items-center gap-2 text-sm text-warm-400">
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-warm-500" />
+                            {event.location}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-warm-400">
+                            <Calendar className="h-3.5 w-3.5 shrink-0 text-warm-500" />
+                            {formatDateRange(event.startDate, event.endDate, event.isMultiDay)}
+                          </div>
+                        </div>
+
+                        {event.description && (
+                          <p className="mt-2 text-sm text-warm-400 line-clamp-2">{event.description}</p>
+                        )}
+
+                        {/* Vendor link */}
+                        <div className="mt-4 flex items-center justify-between">
+                          <Link
+                            href={`${protocol}://${event.vendor.slug}.${rootDomain}`}
+                            target="_blank"
+                            className="flex items-center gap-2 group"
+                          >
+                            {event.vendor.logo ? (
+                              <img src={event.vendor.logo} alt="" className="h-7 w-7 rounded-full object-cover" />
+                            ) : (
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: event.vendor.primaryColor }}>
+                                {event.vendor.name.charAt(0)}
+                              </div>
+                            )}
+                            <span className="text-sm font-bold text-warm-200 group-hover:text-brand-400 transition-colors">{event.vendor.name}</span>
+                            <ExternalLink className="h-3 w-3 text-warm-500" />
+                          </Link>
+
+                          {event.vehicle && (
+                            <span className="rounded-full bg-warm-700 px-2.5 py-1 text-xs font-bold text-warm-300">
+                              🚐 {event.vehicle.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
+
+                    {event.imageUrl && (
+                      <img src={event.imageUrl} alt={event.name} className="h-40 w-full object-cover border-t border-warm-700/50" loading="lazy" />
+                    )}
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </div>

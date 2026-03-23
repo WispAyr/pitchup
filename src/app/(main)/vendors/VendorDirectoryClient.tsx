@@ -12,11 +12,31 @@ interface Vendor {
   description: string | null
   cuisineType: string | null
   primaryColor: string
+  banner: string | null
+  _count: { locations: number; vehicles: number }
 }
 
 interface VendorDirectoryClientProps {
   vendors: Vendor[]
   cuisineTypes: string[]
+}
+
+const cuisineEmojis: Record<string, string> = {
+  'Fish & Chips': '🍟',
+  'Pizza': '🍕',
+  'Burgers': '🍔',
+  'Coffee': '☕',
+  'Tacos': '🌮',
+  'Ice Cream': '🍦',
+  'Wraps': '🥙',
+  'Noodles': '🍜',
+  'Indian': '🍛',
+  'Mexican': '🌮',
+  'Chinese': '🥡',
+  'Thai': '🍜',
+  'BBQ': '🍖',
+  'Desserts': '🧁',
+  'Vegan': '🥗',
 }
 
 export default function VendorDirectoryClient({
@@ -43,37 +63,34 @@ export default function VendorDirectoryClient({
   })
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-100">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-600">
-              <Store className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Vendors</h1>
-              <p className="text-sm text-gray-500">
-                {vendors.length} vendor{vendors.length !== 1 ? 's' : ''} on PitchUp
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-warm-900">
+      {/* Hero banner */}
+      <div className="relative overflow-hidden border-b border-warm-800">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(245,158,11,0.1),_transparent_60%)]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+          <h1 className="text-3xl font-extrabold text-white sm:text-4xl">
+            Explore Our Vendors
+          </h1>
+          <p className="mt-2 text-warm-400">
+            {vendors.length} vendor{vendors.length !== 1 ? 's' : ''} serving across PitchUp
+          </p>
 
-          <div className="max-w-md">
+          <div className="mt-6 max-w-md">
             <SearchBar
               placeholder="Search vendors by name or cuisine..."
               onSearch={handleSearch}
             />
           </div>
 
-          {/* Cuisine filter chips */}
+          {/* Cuisine filter as icon buttons */}
           {cuisineTypes.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-5 scrollbar-hide flex gap-2 overflow-x-auto pb-2">
               <button
                 onClick={() => setSelectedCuisine(null)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors ${
                   !selectedCuisine
                     ? 'bg-brand-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-warm-800 text-warm-300 hover:bg-warm-700'
                 }`}
               >
                 All
@@ -84,12 +101,13 @@ export default function VendorDirectoryClient({
                   onClick={() =>
                     setSelectedCuisine(selectedCuisine === cuisine ? null : cuisine)
                   }
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-colors ${
                     selectedCuisine === cuisine
                       ? 'bg-brand-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-warm-800 text-warm-300 hover:bg-warm-700'
                   }`}
                 >
+                  {cuisineEmojis[cuisine] && <span>{cuisineEmojis[cuisine]}</span>}
                   {cuisine}
                 </button>
               ))}
@@ -100,10 +118,10 @@ export default function VendorDirectoryClient({
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <Store className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            <h2 className="text-lg font-bold text-gray-900 mb-2">No vendors found</h2>
-            <p className="text-gray-500">Try adjusting your search or filter.</p>
+          <div className="text-center py-20">
+            <Store className="mx-auto h-12 w-12 text-warm-600 mb-4" />
+            <h2 className="text-lg font-bold text-white mb-2">No vendors found</h2>
+            <p className="text-warm-400">Try adjusting your search or filter.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -115,6 +133,9 @@ export default function VendorDirectoryClient({
                 cuisineType={vendor.cuisineType}
                 description={vendor.description}
                 primaryColor={vendor.primaryColor}
+                banner={vendor.banner}
+                locationCount={vendor._count.locations}
+                vehicleCount={vendor._count.vehicles}
               />
             ))}
           </div>

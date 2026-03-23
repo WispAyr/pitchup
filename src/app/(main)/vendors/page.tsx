@@ -11,6 +11,8 @@ async function getVendors() {
         description: true,
         cuisineType: true,
         primaryColor: true,
+        banner: true,
+        _count: { select: { locations: true, vehicles: true } },
       },
       orderBy: { name: 'asc' },
     })
