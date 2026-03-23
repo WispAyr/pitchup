@@ -8,93 +8,101 @@ datasource db {
 }
 
 model Vendor {
-  id              String   @id @default(cuid())
-  slug            String   @unique
-  name            String
-  description     String?  @db.Text
-  logo            String?
-  banner          String?
-  primaryColor    String   @default("#F59E0B")
-  secondaryColor  String   @default("#78350F")
-  cuisineType     String?
-  phone           String?
-  email           String
-  website         String?
-  facebook        String?
-  instagram       String?
-  tiktok          String?
-  twitter         String?
+  id             String  @id @default(cuid())
+  slug           String  @unique
+  name           String
+  description    String? @db.Text
+  logo           String?
+  banner         String?
+  primaryColor   String  @default("#F59E0B")
+  secondaryColor String  @default("#78350F")
+  cuisineType    String?
+  phone          String?
+  email          String
+  website        String?
+  facebook       String?
+  instagram      String?
+  tiktok         String?
+  twitter        String?
 
-  stripeAccountId     String?
-  stripeOnboarded     Boolean  @default(false)
-  preOrderingEnabled  Boolean  @default(true)
+  stripeAccountId    String?
+  stripeOnboarded    Boolean @default(false)
+  preOrderingEnabled Boolean @default(true)
 
   // Prep time in minutes per item (default 5)
-  defaultPrepTime     Int      @default(5)
+  defaultPrepTime     Int @default(5)
   // Max concurrent orders per time slot
-  maxOrdersPerSlot    Int      @default(3)
+  maxOrdersPerSlot    Int @default(3)
   // Slot interval in minutes
-  slotIntervalMinutes Int      @default(10)
+  slotIntervalMinutes Int @default(10)
 
-  templateId      String   @default("classic")
+  templateId String @default("classic")
 
   // Map settings
-  mapPreset       String   @default("light") // light | dark | branded
-  mapVisible      Boolean  @default(true)
-  mapDefaultZoom  Int      @default(12)
+  mapPreset      String  @default("light") // light | dark | branded
+  mapVisible     Boolean @default(true)
+  mapDefaultZoom Int     @default(12)
 
-  customDomain    String?  @unique
-  domainStatus    String?  // pending, verified, active
+  customDomain String? @unique
+  domainStatus String? // pending, verified, active
 
   // Contact form config (JSON arrays of enabled form types)
   contactFormsEnabled String @default("[\"general\",\"event_booking\",\"press\",\"catering\"]")
 
-  passwordHash    String
+  passwordHash String
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  menuCategories  MenuCategory[]
-  menuItems       MenuItem[]
-  locations       Location[]
-  schedules       Schedule[]
-  liveSessions    LiveSession[]
-  orders          Order[]
-  follows         Follow[]
-  reviews         Review[]
-  notifications   Notification[]
-  vehicles        Vehicle[]
-  documents       Document[]
-  maintenanceLogs MaintenanceLog[]
-  enquiries       Enquiry[]
-  media           VendorMedia[]
-  routes          Route[]
-  events          Event[]
-  vouchers        Voucher[]
-  deals           Deal[]
+  menuCategories   MenuCategory[]
+  menuItems        MenuItem[]
+  locations        Location[]
+  schedules        Schedule[]
+  liveSessions     LiveSession[]
+  orders           Order[]
+  follows          Follow[]
+  reviews          Review[]
+  notifications    Notification[]
+  vehicles         Vehicle[]
+  documents        Document[]
+  maintenanceLogs  MaintenanceLog[]
+  enquiries        Enquiry[]
+  media            VendorMedia[]
+  routes           Route[]
+  events           Event[]
+  vouchers         Voucher[]
+  deals            Deal[]
+  planId           String?
+  plan             Plan?            @relation(fields: [planId], references: [id])
+  subscriptions    Subscription[]
+  payments         Payment[]
+  credits          VendorCredit[]
+  discounts        VendorDiscount[]
+  addons           VendorAddon[]
+  stripeCustomerId String?          @unique
 
   @@map("vendors")
 }
 
 model Voucher {
-  id                 String    @id @default(cuid())
+  id                 String              @id @default(cuid())
   vendorId           String
-  vendor             Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  code               String    @unique
-  type               String    // percentage, fixed, freeItem, buyOneGetOne, giftCard
+  vendor             Vendor              @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  code               String              @unique
+  type               String // percentage, fixed, freeItem, buyOneGetOne, giftCard
   value              Float?
   freeItemId         String?
   description        String
-  minOrder           Float?    // in pence
+  minOrder           Float? // in pence
   maxUses            Int?
-  usesCount          Int       @default(0)
+  usesCount          Int                 @default(0)
   maxUsesPerCustomer Int?
-  validFrom          DateTime  @default(now())
+  validFrom          DateTime            @default(now())
   expiresAt          DateTime?
-  isActive           Boolean   @default(true)
-  applicableTo       String?   // JSON: "all", category, menuItemIds
-  giftCardBalance    Float?    // remaining balance in pence for giftCard type
-  createdAt          DateTime  @default(now())
+  isActive           Boolean             @default(true)
+  applicableTo       String? // JSON: "all", category, menuItemIds
+  giftCardBalance    Float? // remaining balance in pence for giftCard type
+  createdAt          DateTime            @default(now())
   redemptions        VoucherRedemption[]
 
   @@map("vouchers")
@@ -106,7 +114,7 @@ model VoucherRedemption {
   voucher    Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
   orderId    String?
   customerId String?
-  amount     Float?   // amount deducted (for gift cards)
+  amount     Float? // amount deducted (for gift cards)
   redeemedAt DateTime @default(now())
 
   @@map("voucher_redemptions")
@@ -118,14 +126,14 @@ model Deal {
   vendor      Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   title       String
   description String    @db.Text
-  type        String    // bundle, happyHour, daySpecial, event
-  price       Float?    // in pence
+  type        String // bundle, happyHour, daySpecial, event
+  price       Float? // in pence
   savings     String?
   imageUrl    String?
-  items       String?   // JSON array of menuItem ids
-  validDays   String?   // JSON array of day numbers
-  validFrom   String?   // time "16:00"
-  validTo     String?   // time "18:00"
+  items       String? // JSON array of menuItem ids
+  validDays   String? // JSON array of day numbers
+  validFrom   String? // time "16:00"
+  validTo     String? // time "18:00"
   startDate   DateTime?
   endDate     DateTime?
   isFeatured  Boolean   @default(false)
@@ -136,30 +144,30 @@ model Deal {
 }
 
 model MenuCategory {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   vendorId  String
   name      String
-  sortOrder Int      @default(0)
+  sortOrder Int    @default(0)
 
-  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  items     MenuItem[]
+  vendor Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  items  MenuItem[]
 
   @@map("menu_categories")
 }
 
 model MenuItem {
-  id           String   @id @default(cuid())
-  vendorId     String
-  categoryId   String
-  name         String
-  description  String?  @db.Text
-  price        Int      // in pence
-  image        String?
-  allergens    String[] // e.g., ["gluten", "dairy", "eggs"]
-  dietaryTags  String[] // e.g., ["vegetarian", "vegan", "gluten-free"]
-  available    Boolean  @default(true)
-  sortOrder    Int      @default(0)
-  prepTime     Int?     // minutes, overrides vendor default
+  id          String   @id @default(cuid())
+  vendorId    String
+  categoryId  String
+  name        String
+  description String?  @db.Text
+  price       Int // in pence
+  image       String?
+  allergens   String[] // e.g., ["gluten", "dairy", "eggs"]
+  dietaryTags String[] // e.g., ["vegetarian", "vegan", "gluten-free"]
+  available   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  prepTime    Int? // minutes, overrides vendor default
 
   vendor        Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   category      MenuCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -170,90 +178,90 @@ model MenuItem {
 }
 
 model Location {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   vendorId  String
   name      String
   address   String?
   lat       Float
   lng       Float
-  isRegular Boolean  @default(false)
+  isRegular Boolean @default(false)
 
-  vendor       Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  schedules    Schedule[]
-  liveSessions LiveSession[]
+  vendor        Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  schedules     Schedule[]
+  liveSessions  LiveSession[]
   locationMenus LocationMenu[]
-  routeStops   RouteStop[]
+  routeStops    RouteStop[]
 
   @@map("locations")
 }
 
 model Schedule {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   vendorId   String
   locationId String
-  dayOfWeek  Int      // 0=Sunday, 1=Monday, ..., 6=Saturday
-  startTime  String   // "17:00"
-  endTime    String   // "21:00"
-  recurring  Boolean  @default(true)
+  dayOfWeek  Int // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startTime  String // "17:00"
+  endTime    String // "21:00"
+  recurring  Boolean @default(true)
 
-  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  vendor   Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   @@map("schedules")
 }
 
 model LiveSession {
-  id            String    @id @default(cuid())
-  vendorId      String
-  locationId    String
-  vehicleId     String?
-  startedAt     DateTime  @default(now())
-  endedAt       DateTime?
-  lat           Float
-  lng           Float
+  id         String    @id @default(cuid())
+  vendorId   String
+  locationId String
+  vehicleId  String?
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  lat        Float
+  lng        Float
 
   // Delay & cancellation
-  delayMinutes  Int?      // how many minutes late
-  delayMessage  String?   @db.Text
-  cancelled     Boolean   @default(false)
-  cancelReason  String?   @db.Text
-  cancelledAt   DateTime?
+  delayMinutes Int? // how many minutes late
+  delayMessage String?   @db.Text
+  cancelled    Boolean   @default(false)
+  cancelReason String?   @db.Text
+  cancelledAt  DateTime?
 
-  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  vehicle    Vehicle? @relation(fields: [vehicleId], references: [id])
-  orders     Order[]
+  vendor   Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle? @relation(fields: [vehicleId], references: [id])
+  orders   Order[]
 
   @@map("live_sessions")
 }
 
 model Customer {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   name         String
-  email        String   @unique
+  email        String  @unique
   phone        String?
   passwordHash String
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  orders       Order[]
-  follows      Follow[]
-  reviews      Review[]
+  orders        Order[]
+  follows       Follow[]
+  reviews       Review[]
   notifications Notification[]
 
   @@map("customers")
 }
 
 model Order {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   vendorId        String
-  customerId      String?  // nullable for guest orders
+  customerId      String? // nullable for guest orders
   liveSessionId   String?
-  items           Json     // [{menuItemId, name, price, quantity}]
-  subtotal        Int      // in pence
-  total           Int      // in pence
-  status          String   @default("pending") // pending, confirmed, preparing, ready, collected, cancelled, no-show
+  items           Json // [{menuItemId, name, price, quantity}]
+  subtotal        Int // in pence
+  total           Int // in pence
+  status          String    @default("pending") // pending, confirmed, preparing, ready, collected, cancelled, no-show
   collectionTime  DateTime?
   customerName    String
   customerPhone   String?
@@ -261,21 +269,21 @@ model Order {
   stripePaymentId String?
 
   // Pre-order with pay-on-collection
-  pickupCode      String?  @unique // e.g. "P-4729"
-  timeSlotStart   DateTime?
-  timeSlotEnd     DateTime?
-  paymentMethod   String?  // cash, card — filled when collected
-  paidAt          DateTime?
-  cancelledAt     DateTime?
-  cancelReason    String?
-  noShowAt        DateTime?
+  pickupCode    String?   @unique // e.g. "P-4729"
+  timeSlotStart DateTime?
+  timeSlotEnd   DateTime?
+  paymentMethod String? // cash, card — filled when collected
+  paidAt        DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  noShowAt      DateTime?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  vendor          Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  customer        Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  liveSession     LiveSession? @relation(fields: [liveSessionId], references: [id])
+  vendor      Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  liveSession LiveSession? @relation(fields: [liveSessionId], references: [id])
 
   @@map("orders")
 }
@@ -287,8 +295,8 @@ model Follow {
   notificationsEnabled Boolean  @default(true)
   createdAt            DateTime @default(now())
 
-  customer             Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  vendor               Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor   Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, vendorId])
   @@map("follows")
@@ -298,34 +306,34 @@ model Review {
   id         String   @id @default(cuid())
   vendorId   String
   customerId String
-  rating     Int      // 1-5
+  rating     Int // 1-5
   text       String?  @db.Text
   createdAt  DateTime @default(now())
 
-  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor   Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
 }
 
 model Notification {
-  id           String   @id @default(cuid())
-  vendorId     String
-  customerId   String?
-  type         String   // order_confirmed, order_ready, delay, cancellation, session_live
-  title        String
-  message      String   @db.Text
-  read         Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id         String   @id @default(cuid())
+  vendorId   String
+  customerId String?
+  type       String // order_confirmed, order_ready, delay, cancellation, session_live
+  title      String
+  message    String   @db.Text
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
-  vendor       Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
-  customer     Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vendor   Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
 
 model Vehicle {
-  id           String   @id @default(cuid())
+  id           String  @id @default(cuid())
   vendorId     String
   name         String
   registration String?
@@ -333,12 +341,12 @@ model Vehicle {
   model        String?
   year         Int?
   photo        String?
-  notes        String?  @db.Text
-  role         String   @default("route") // route, events, backup
-  status       String   @default("active") // active, maintenance, retired
+  notes        String? @db.Text
+  role         String  @default("route") // route, events, backup
+  status       String  @default("active") // active, maintenance, retired
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   vendor          Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   documents       Document[]
@@ -351,17 +359,17 @@ model Vehicle {
 }
 
 model Document {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   vendorId  String
   vehicleId String?
-  category  String   // accreditation, insurance, food_hygiene, gas_safety, fire_safety, pat_testing, mot, vehicle_insurance, public_liability, council_permit, other
+  category  String // accreditation, insurance, food_hygiene, gas_safety, fire_safety, pat_testing, mot, vehicle_insurance, public_liability, council_permit, other
   title     String
   fileUrl   String
   fileName  String
   fileSize  Int
   mimeType  String
   expiresAt DateTime?
-  notes     String?  @db.Text
+  notes     String?   @db.Text
 
   uploadedAt DateTime @default(now())
 
@@ -372,20 +380,20 @@ model Document {
 }
 
 model MaintenanceLog {
-  id            String   @id @default(cuid())
-  vehicleId     String
-  vendorId      String
-  type          String   // service, repair, inspection, breakdown
-  title         String
-  description   String?  @db.Text
-  cost          Int?     // in pence
-  mileage       Int?
-  performedBy   String?
-  performedAt   DateTime @default(now())
-  nextDueAt     DateTime?
+  id             String    @id @default(cuid())
+  vehicleId      String
+  vendorId       String
+  type           String // service, repair, inspection, breakdown
+  title          String
+  description    String?   @db.Text
+  cost           Int? // in pence
+  mileage        Int?
+  performedBy    String?
+  performedAt    DateTime  @default(now())
+  nextDueAt      DateTime?
   nextDueMileage Int?
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   vendor  Vendor  @relation(fields: [vendorId], references: [id], onDelete: Cascade)
@@ -394,11 +402,11 @@ model MaintenanceLog {
 }
 
 model LocationMenu {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid())
   locationId    String
   menuItemId    String
-  available     Boolean  @default(true)
-  priceOverride Int?     // in pence, null = use default
+  available     Boolean @default(true)
+  priceOverride Int? // in pence, null = use default
 
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
@@ -408,26 +416,26 @@ model LocationMenu {
 }
 
 model Enquiry {
-  id            String   @id @default(cuid())
-  vendorId      String
-  enquiryType   String   @default("general") // general, event_booking, press, catering
-  name          String
-  email         String
-  phone         String?
-  eventDate     DateTime?
-  eventType     String?  // wedding, corporate, festival, market, private_party, other
-  guestCount    Int?
-  location      String?
-  budget        String?
-  dietary       String?
-  outlet        String?  // press: media outlet name
-  deadline      DateTime? // press: response deadline
-  message       String?  @db.Text
-  status        String   @default("new") // new, responded, booked, declined
-  staffNotes    String?  @db.Text
+  id          String    @id @default(cuid())
+  vendorId    String
+  enquiryType String    @default("general") // general, event_booking, press, catering
+  name        String
+  email       String
+  phone       String?
+  eventDate   DateTime?
+  eventType   String? // wedding, corporate, festival, market, private_party, other
+  guestCount  Int?
+  location    String?
+  budget      String?
+  dietary     String?
+  outlet      String? // press: media outlet name
+  deadline    DateTime? // press: response deadline
+  message     String?   @db.Text
+  status      String    @default("new") // new, responded, booked, declined
+  staffNotes  String?   @db.Text
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
@@ -438,11 +446,11 @@ model MenuPricing {
   id         String   @id @default(cuid())
   menuItemId String
   menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  label      String   // "Lunch Special", "Evening"
-  price      Int      // in pence
-  startTime  String   // "12:00"
-  endTime    String   // "14:00"
-  daysOfWeek Int[]    // [1,2,3,4,5] = Mon-Fri
+  label      String // "Lunch Special", "Evening"
+  price      Int // in pence
+  startTime  String // "12:00"
+  endTime    String // "14:00"
+  daysOfWeek Int[] // [1,2,3,4,5] = Mon-Fri
   isActive   Boolean  @default(true)
 
   @@map("menu_pricing")
@@ -511,4 +519,123 @@ model RouteStop {
   sortOrder  Int      @default(0)
 
   @@map("route_stops")
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String
+  slug          String         @unique
+  stripePriceId String?
+  monthlyPrice  Int            @default(0)
+  yearlyPrice   Int?
+  maxVehicles   Int            @default(1)
+  features      String         @default("[]") @db.Text
+  isActive      Boolean        @default(true)
+  sortOrder     Int            @default(0)
+  createdAt     DateTime       @default(now())
+  vendors       Vendor[]
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model PlanFeature {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  name          String
+  description   String?
+  category      String        @default("core")
+  monthlyPrice  Int?
+  stripePriceId String?
+  isAddon       Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  vendorAddons  VendorAddon[]
+
+  @@map("plan_features")
+}
+
+model VendorAddon {
+  id                       String      @id @default(cuid())
+  vendorId                 String
+  featureId                String
+  stripeSubscriptionItemId String?
+  status                   String      @default("active")
+  startedAt                DateTime    @default(now())
+  cancelledAt              DateTime?
+  vendor                   Vendor      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  feature                  PlanFeature @relation(fields: [featureId], references: [id])
+
+  @@unique([vendorId, featureId])
+  @@map("vendor_addons")
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  vendorId             String
+  planId               String
+  stripeSubscriptionId String?   @unique
+  stripeCustomerId     String?
+  status               String    @default("active")
+  billingCycle         String    @default("monthly")
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  trialEndsAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  vendor               Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  plan                 Plan      @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  vendorId        String
+  stripePaymentId String?  @unique
+  stripeInvoiceId String?
+  amount          Int
+  currency        String   @default("gbp")
+  status          String
+  description     String?
+  refundedAmount  Int      @default(0)
+  refundId        String?
+  metadata        String?  @db.Text
+  createdAt       DateTime @default(now())
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model VendorCredit {
+  id               String    @id @default(cuid())
+  vendorId         String
+  amount           Int
+  reason           String
+  description      String?
+  appliedToInvoice String?
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+  createdBy        String?
+  vendor           Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_credits")
+}
+
+model VendorDiscount {
+  id             String    @id @default(cuid())
+  vendorId       String
+  stripeCouponId String?
+  name           String
+  type           String
+  value          Int
+  duration       String    @default("once")
+  durationMonths Int?
+  isActive       Boolean   @default(true)
+  appliedAt      DateTime  @default(now())
+  expiresAt      DateTime?
+  createdBy      String?
+  vendor         Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("vendor_discounts")
 }

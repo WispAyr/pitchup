@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Monitor, ShoppingBag, Calendar, Route,
   Flame, Ticket, Share2, PartyPopper,
   Truck, FileCheck, Wrench, MessageSquare,
-  Settings, Palette, Globe,
+  Settings, Palette, Globe, CreditCard,
   LogOut, Menu, X, ExternalLink, Radio,
   UtensilsCrossed, Image, MapPin, BarChart3,
   ChevronDown,
@@ -56,6 +56,7 @@ const NAV_GROUPS = [
   {
     label: 'Settings',
     items: [
+      { label: 'Billing & Plans', href: '/billing', icon: CreditCard },
       { label: 'Profile & Branding', href: '/settings', icon: Settings },
     ],
   },

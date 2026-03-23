@@ -15,12 +15,18 @@ import {
   LogOut,
   Menu,
   X,
+  CreditCard,
+  Crown,
+  TrendingUp,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Vendors', href: '/admin/vendors', icon: Store },
   { label: 'Orders', href: '/admin/orders', icon: ShoppingBag },
+  { label: 'Payments', href: '/admin/payments', icon: CreditCard },
+  { label: 'Subscriptions', href: '/admin/subscriptions', icon: Crown },
+  { label: 'Revenue', href: '/admin/revenue', icon: TrendingUp },
   { label: 'Enquiries', href: '/admin/enquiries', icon: MessageSquare },
   { label: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { label: 'Domains', href: '/admin/domains', icon: Globe },
