@@ -83,7 +83,7 @@ export function MenuPageClient({ categories, allAllergens, preOrderingEnabled }:
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-5">
+    <div className="mx-auto max-w-5xl px-4 py-5 animate-fade-in-up">
       <h1 className="mb-4 text-2xl font-extrabold text-gray-900">Our Menu</h1>
 
       {/* Sticky category nav — scrollable pills */}
@@ -109,11 +109,13 @@ export function MenuPageClient({ categories, allAllergens, preOrderingEnabled }:
 
       {/* Menu sections */}
       <div className="space-y-8">
-        {categories.map((cat) => (
+        {categories.map((cat, index) => (
           <section
             key={cat.id}
             id={cat.id}
             ref={(el) => { sectionRefs.current[cat.id] = el }}
+            className="animate-fade-in-up"
+            style={{ animationDelay: `${Math.min(index * 0.1, 0.5)}s` }}
           >
             <h2 className="mb-3 text-lg font-extrabold text-gray-900">{cat.name}</h2>
             {/* Full-width stacked cards on mobile, 2-col on desktop */}

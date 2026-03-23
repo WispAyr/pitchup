@@ -45,17 +45,17 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(245,158,11,0.12),_transparent_70%)]" />
         <div className="relative mx-auto max-w-7xl px-5 pb-16 pt-12 sm:pb-24 sm:pt-20">
           <div className="mx-auto max-w-2xl text-center">
-            <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
+            <h1 className="animate-fade-in-up text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
               Never Miss the{' '}
               <span className="text-brand-500">Van</span>{' '}
               Again
             </h1>
-            <p className="mx-auto mt-4 max-w-lg text-lg text-gray-500 sm:text-xl">
+            <p className="animate-fade-in-up animate-delay-1 mx-auto mt-4 max-w-lg text-lg text-gray-500 sm:text-xl">
               Find mobile food vendors near you. Pre-order, skip the queue, eat great food.
             </p>
 
             {/* CTA */}
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <div className="animate-fade-in-up animate-delay-2 mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link
                 href="/discover"
                 className="flex h-14 items-center justify-center rounded-2xl bg-brand-500 px-8 text-base font-bold text-white shadow-lg shadow-brand-500/20 active:scale-[0.98] sm:text-lg"
@@ -73,7 +73,7 @@ export default async function HomePage() {
 
             {/* Live count */}
             {stats.liveCount > 0 && (
-              <div className="mt-6 flex items-center justify-center gap-2">
+              <div className="animate-fade-in-up animate-delay-3 mt-6 flex items-center justify-center gap-2">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
                   <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
@@ -100,6 +100,9 @@ export default async function HomePage() {
               { icon: Zap, title: 'Collect', desc: 'Skip the queue — hot, fresh, ready' },
             ].map((step, i) => (
               <div key={i} className="text-center">
+                <div className="mx-auto mb-2 flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">
+                  {i + 1}
+                </div>
                 <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-600">
                   <step.icon className="h-7 w-7" />
                 </div>
@@ -124,7 +127,7 @@ export default async function HomePage() {
                   key={v.id}
                   href={`${protocol}://${v.slug}.${rootDomain}`}
                   target="_blank"
-                  className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all active:scale-[0.98] hover:shadow-md"
+                  className="card-hover group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all active:scale-[0.98] hover:shadow-md"
                 >
                   {/* Brand bar */}
                   <div className="h-1.5" style={{ backgroundColor: v.primaryColor }} />
@@ -226,7 +229,7 @@ export default async function HomePage() {
               { icon: PartyPopper, title: 'Events', desc: 'Festivals, airshows, weddings — manage alongside your regular routes.' },
               { icon: PiggyBank, title: 'No Commission', desc: 'Pay-at-van model. No JustEat/Deliveroo cut. Your money stays yours.' },
             ].map((f, i) => (
-              <div key={i} className="rounded-2xl bg-white/5 p-6 transition-colors hover:bg-white/10">
+              <div key={i} className="card-hover rounded-2xl bg-white/5 p-6 transition-colors hover:bg-white/10">
                 <f.icon className="mb-3 h-6 w-6 text-brand-400" />
                 <h3 className="mb-1 font-bold text-white">{f.title}</h3>
                 <p className="text-sm leading-relaxed text-gray-400">{f.desc}</p>
@@ -286,7 +289,7 @@ export default async function HomePage() {
           <p className="mb-10 text-center text-gray-400">Start free. Upgrade when you grow.</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {/* Free */}
-            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6">
+            <div className="card-hover animate-fade-in-up rounded-2xl border border-gray-800 bg-gray-950 p-6">
               <h3 className="text-lg font-bold">Starter</h3>
               <div className="mt-2 text-3xl font-extrabold">Free</div>
               <ul className="mt-6 space-y-3 text-sm text-gray-400">
@@ -300,7 +303,7 @@ export default async function HomePage() {
               </Link>
             </div>
             {/* Pro */}
-            <div className="rounded-2xl border-2 border-brand-500 bg-gray-950 p-6 ring-1 ring-brand-500/20">
+            <div className="card-hover animate-fade-in-up animate-delay-1 rounded-2xl border-2 border-brand-500 bg-gray-950 p-6 ring-1 ring-brand-500/20">
               <div className="mb-2 inline-block rounded-full bg-brand-500/20 px-3 py-1 text-xs font-bold text-brand-400">Most Popular</div>
               <h3 className="text-lg font-bold">Pro</h3>
               <div className="mt-2"><span className="text-3xl font-extrabold">£29</span><span className="text-gray-500">/mo</span></div>
@@ -317,7 +320,7 @@ export default async function HomePage() {
               </Link>
             </div>
             {/* Enterprise */}
-            <div className="rounded-2xl border border-gray-800 bg-gray-950 p-6">
+            <div className="card-hover animate-fade-in-up animate-delay-2 rounded-2xl border border-gray-800 bg-gray-950 p-6">
               <h3 className="text-lg font-bold">Enterprise</h3>
               <div className="mt-2 text-3xl font-extrabold">Custom</div>
               <ul className="mt-6 space-y-3 text-sm text-gray-400">
@@ -346,7 +349,7 @@ export default async function HomePage() {
               { q: 'What if I have multiple vans?', a: 'Full fleet management. Each van has its own name, routes, live sessions, and order queue. Drivers manage independently.' },
               { q: 'Is there a contract?', a: 'No contracts. Free tier is free forever. Pro is month-to-month, cancel anytime.' },
             ].map((faq, i) => (
-              <details key={i} className="group rounded-2xl border border-gray-800 bg-gray-900/50 px-6 py-4">
+              <details key={i} className={`animate-fade-in-up animate-delay-${i + 1} group rounded-2xl border border-gray-800 bg-gray-900/50 px-6 py-4`}>
                 <summary className="flex cursor-pointer items-center justify-between font-bold text-white [&::-webkit-details-marker]:hidden">
                   {faq.q}
                   <ChevronDown className="h-5 w-5 text-gray-500 transition-transform group-open:rotate-180" />
@@ -361,7 +364,7 @@ export default async function HomePage() {
       {/* Final CTA */}
       <section className="bg-brand-500 py-16 text-center sm:py-20">
         <div className="mx-auto max-w-2xl px-5">
-          <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+          <h2 className="animate-fade-in-up text-3xl font-extrabold text-white sm:text-4xl">
             List Your Van — Free in 5 Minutes
           </h2>
           <p className="mt-3 text-brand-100">
@@ -369,7 +372,7 @@ export default async function HomePage() {
           </p>
           <Link
             href="/auth/vendor-signup"
-            className="mt-8 inline-flex h-14 items-center justify-center rounded-2xl bg-white px-10 text-lg font-extrabold text-brand-700 shadow-lg active:scale-[0.98]"
+            className="animate-fade-in-up mt-8 inline-flex h-14 items-center justify-center rounded-2xl bg-white px-10 text-lg font-extrabold text-brand-700 shadow-lg active:scale-[0.98]"
           >
             Get Started Free
           </Link>

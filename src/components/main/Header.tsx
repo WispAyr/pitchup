@@ -49,7 +49,7 @@ export default function Header() {
             <Link href="/auth/signin" className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
               Sign In
             </Link>
-            <Link href="/auth/signup" className="rounded-full bg-brand-500 px-5 py-2 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm">
+            <Link href="/auth/signup" className="btn-hover rounded-full bg-brand-500 px-5 py-2 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm">
               Sign Up
             </Link>
           </div>
@@ -68,7 +68,7 @@ export default function Header() {
       {/* Mobile slide-out overlay */}
       {open && (
         <>
-          <div className="fixed inset-0 top-14 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 top-14 z-40 bg-black/30 md:hidden transition-opacity duration-200" onClick={() => setOpen(false)} />
           <div className="fixed inset-x-0 top-14 z-50 bg-white shadow-xl md:hidden animate-in slide-in-from-top-2 duration-200">
             <nav className="flex flex-col px-4 py-3 gap-1">
               <Link href="/discover" onClick={() => setOpen(false)}

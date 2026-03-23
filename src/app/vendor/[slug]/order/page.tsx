@@ -273,6 +273,24 @@ export default function OrderPage() {
 
     return (
       <div className="flex min-h-[50vh] items-center justify-center px-4">
+        {/* CSS Confetti */}
+        <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden="true">
+          {Array.from({ length: 40 }).map((_, i) => (
+            <div
+              key={i}
+              className="confetti-piece"
+              style={{
+                left: `${Math.random() * 100}%`,
+                backgroundColor: ['#F59E0B', '#3B82F6', '#10B981', '#EF4444', '#8B5CF6', '#EC4899'][i % 6],
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${2 + Math.random() * 2}s`,
+                width: `${6 + Math.random() * 8}px`,
+                height: `${6 + Math.random() * 8}px`,
+                borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+              }}
+            />
+          ))}
+        </div>
         <div className="max-w-md w-full text-center">
           <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
           <h1 className="mt-4 text-2xl font-bold text-gray-900">Order Placed!</h1>
@@ -287,10 +305,10 @@ export default function OrderPage() {
             </div>
           )}
 
-          <div className="mt-6 rounded-2xl border-2 border-dashed p-6" style={{ borderColor: vendor.primaryColor }}>
+          <div className="animate-scale-in mt-6 rounded-2xl border-2 border-dashed p-6" style={{ borderColor: vendor.primaryColor }}>
             <p className="text-sm font-medium text-gray-500 mb-2">Your Pickup Code</p>
             <div className="flex items-center justify-center gap-3">
-              <span className="text-4xl font-black tracking-wider" style={{ color: vendor.primaryColor }}>
+              <span className="text-5xl sm:text-6xl font-black tracking-wider" style={{ color: vendor.primaryColor }}>
                 {confirmationData.pickupCode}
               </span>
               <button
@@ -392,11 +410,41 @@ export default function OrderPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
+    <div className="animate-fade-in-up mx-auto max-w-2xl px-4 py-6">
       <h1 className="mb-2 text-2xl font-bold text-gray-900 sm:text-3xl">Pre-Order</h1>
       <p className="mb-6 text-sm text-gray-500">
         Order ahead and pay when you collect. No payment required now.
       </p>
+
+      {/* Progress stepper */}
+      <div className="mb-8 flex items-center justify-between">
+        {[
+          { label: 'Menu', done: true },
+          { label: 'Review', done: true },
+          { label: 'Details', done: false },
+          { label: 'Confirm', done: false },
+        ].map((step, i, arr) => (
+          <div key={step.label} className="flex items-center flex-1 last:flex-none">
+            <div className="flex flex-col items-center">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                  step.done ? 'text-white' : 'border-2 border-gray-200 text-gray-400'
+                }`}
+                style={step.done ? { backgroundColor: vendor.primaryColor } : undefined}
+              >
+                {step.done ? '✓' : i + 1}
+              </div>
+              <span className={`mt-1 text-[10px] font-medium ${step.done ? 'text-gray-900' : 'text-gray-400'}`}>
+                {step.label}
+              </span>
+            </div>
+            {i < arr.length - 1 && (
+              <div className={`mx-2 h-0.5 flex-1 rounded step-connector ${step.done ? '' : 'bg-gray-200'}`}
+                style={step.done ? { backgroundColor: vendor.primaryColor } : undefined} />
+            )}
+          </div>
+        ))}
+      </div>
 
       {/* Session selector */}
       {sessionsLoading ? (

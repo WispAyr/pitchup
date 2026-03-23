@@ -1,11 +1,42 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { VendorProvider } from '@/lib/vendor-context'
 import type { VendorData } from '@/lib/vendor-context'
 import { CartDrawer } from '@/components/vendor/CartDrawer'
 import { LiveBanner } from '@/components/vendor/LiveBanner'
 import { VendorLayoutClient } from './layout-client'
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const vendor = await prisma.vendor.findUnique({
+    where: { slug: params.slug },
+    select: { name: true, description: true, cuisineType: true, banner: true, logo: true },
+  })
+
+  if (!vendor) return {}
+
+  const title = `${vendor.name}${vendor.cuisineType ? ` — ${vendor.cuisineType}` : ''} | PitchUp`
+  const description = vendor.description || `Order from ${vendor.name} on PitchUp. See the menu, find locations, and pre-order for pickup.`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: vendor.banner ? [{ url: vendor.banner, width: 1200, height: 630 }] : [],
+      type: 'website',
+      siteName: 'PitchUp',
+      locale: 'en_GB',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+  }
+}
 
 export default async function VendorLayout({
   children,
@@ -69,7 +100,7 @@ export default async function VendorLayout({
   return (
     <VendorProvider vendor={vendorData}>
       <div
-        className="flex min-h-screen flex-col bg-white"
+        className="flex min-h-screen flex-col bg-[#FAFAFA]"
         style={
           {
             '--vendor-primary': vendor.primaryColor,
@@ -77,6 +108,24 @@ export default async function VendorLayout({
           } as React.CSSProperties
         }
       >
+        {/* Structured data — LocalBusiness / FoodEstablishment */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FoodEstablishment',
+              name: vendor.name,
+              description: vendor.description,
+              servesCuisine: vendor.cuisineType,
+              image: vendor.banner || vendor.logo,
+              url: `https://pitchup.local-connect.uk/vendor/${vendor.slug}`,
+              ...(vendor.phone ? { telephone: vendor.phone } : {}),
+              ...(vendor.email ? { email: vendor.email } : {}),
+            }),
+          }}
+        />
+
         {/* Live banner — shows all active vans */}
         {activeSessions.length > 0 && (
           <LiveBanner
@@ -128,15 +177,22 @@ export default async function VendorLayout({
         <main className="flex-1">{children}</main>
 
         {/* Footer */}
-        <footer className="border-t border-gray-100 px-4 py-6 text-center text-xs text-gray-400">
-          Powered by{' '}
-          <a
-            href={process.env.NEXT_PUBLIC_ROOT_URL || 'https://pitchup.local-connect.uk'}
-            className="font-bold transition-colors hover:text-gray-600"
-            style={{ color: vendor.primaryColor }}
-          >
-            PitchUp
-          </a>
+        <footer className="border-t border-gray-100 bg-gray-50 px-4 py-8">
+          <div className="mx-auto max-w-5xl text-center">
+            <p className="text-xs text-gray-400">
+              Powered by{' '}
+              <a
+                href={process.env.NEXT_PUBLIC_ROOT_URL || 'https://pitchup.local-connect.uk'}
+                className="font-bold transition-colors hover:text-gray-600"
+                style={{ color: vendor.primaryColor }}
+              >
+                PitchUp
+              </a>
+            </p>
+            <p className="mt-2 text-[10px] text-gray-300">
+              Mobile food, sorted.
+            </p>
+          </div>
         </footer>
 
         {/* Cart */}

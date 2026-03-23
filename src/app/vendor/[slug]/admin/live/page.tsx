@@ -43,7 +43,7 @@ export default function KDSSelectPage({ params }: { params: { slug: string } }) 
 
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-extrabold text-gray-900">Kitchen Display</h1>
+      <h1 className="mb-2 text-2xl font-extrabold text-gray-900 animate-fade-in-up">Kitchen Display</h1>
       <p className="mb-6 text-sm text-gray-500">Select a van to open its KDS. Each van has its own order queue.</p>
 
       {vehicles.length === 0 ? (
@@ -57,7 +57,7 @@ export default function KDSSelectPage({ params }: { params: { slug: string } }) 
           {/* All orders KDS */}
           <Link
             href={`/vendor/${params.slug}/admin/live/all`}
-            className="group rounded-2xl border-2 border-gray-200 bg-white p-5 transition-all hover:border-gray-400 hover:shadow-md active:scale-[0.98]"
+            className="group rounded-2xl border-2 border-gray-200 bg-white p-5 transition-all hover:border-gray-400 hover:shadow-md active:scale-[0.98] card-hover animate-fade-in-up"
           >
             <div className="flex items-center gap-3 mb-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-900 text-white">
@@ -74,16 +74,17 @@ export default function KDSSelectPage({ params }: { params: { slug: string } }) 
           </Link>
 
           {/* Per-van KDS cards */}
-          {vehicles.map((vehicle) => {
+          {vehicles.map((vehicle, index) => {
             const session = getSessionForVehicle(vehicle.id)
             const isLive = !!session
             return (
               <Link
                 key={vehicle.id}
                 href={`/vendor/${params.slug}/admin/live/${vehicle.id}`}
-                className={`group rounded-2xl border-2 p-5 transition-all hover:shadow-md active:scale-[0.98] ${
+                className={`group rounded-2xl border-2 p-5 transition-all hover:shadow-md active:scale-[0.98] card-hover animate-fade-in-up ${
                   isLive ? 'border-green-300 bg-green-50 hover:border-green-400' : 'border-gray-100 bg-white hover:border-gray-300'
                 }`}
+                style={{ animationDelay: `${(index + 1) * 75}ms` }}
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-xl ${isLive ? 'bg-green-100' : 'bg-gray-100'}`}>

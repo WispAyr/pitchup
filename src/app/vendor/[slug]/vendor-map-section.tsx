@@ -63,9 +63,9 @@ export function VendorMapSection({ vendor }: VendorMapSectionProps) {
   }))
 
   return (
-    <section className="border-b border-gray-100">
+    <section className="border-b border-gray-100 animate-fade-in-up">
       <div className="mx-auto max-w-5xl px-4 py-6">
-        <h2 className="mb-3 text-xl font-bold text-gray-900">Find Us</h2>
+        <h2 className="mb-3 text-xl font-extrabold text-gray-900">Find Us</h2>
         <DynamicVendorMap
           vendor={vendorInfo}
           locations={locations}

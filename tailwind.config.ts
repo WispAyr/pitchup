@@ -27,6 +27,20 @@ const config: Config = {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         display: ['Cal Sans', 'Inter', 'system-ui', 'sans-serif'],
       },
+      borderRadius: {
+        '2xl': '16px',
+        xl: '12px',
+        lg: '8px',
+      },
+      boxShadow: {
+        card: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        'card-hover': '0 8px 24px rgba(0, 0, 0, 0.08)',
+        modal: '0 20px 60px rgba(0, 0, 0, 0.15)',
+      },
+      fontSize: {
+        hero: ['3rem', { lineHeight: '1.1', fontWeight: '800' }],
+        'hero-sm': ['2.25rem', { lineHeight: '1.1', fontWeight: '800' }],
+      },
     },
   },
   plugins: [],

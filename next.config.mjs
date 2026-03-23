@@ -2,10 +2,20 @@
 const nextConfig = {
   images: {
     domains: ['localhost'],
+    formats: ['image/avif', 'image/webp'],
   },
   typescript: {
     ignoreBuildErrors: true,
   },
+  headers: async () => [
+    {
+      source: '/sw.js',
+      headers: [
+        { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+        { key: 'Service-Worker-Allowed', value: '/' },
+      ],
+    },
+  ],
 }
 
 export default nextConfig

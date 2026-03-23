@@ -27,7 +27,7 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">All Orders</h1>
         <select
@@ -47,8 +47,8 @@ export default function AdminOrdersPage() {
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-700 border-t-amber-400" />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-800">
-          <table className="w-full">
+        <div className="overflow-x-auto rounded-xl border border-gray-800">
+          <table className="w-full min-w-[640px]">
             <thead className="bg-gray-900">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>

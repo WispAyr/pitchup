@@ -33,7 +33,7 @@ export default async function VendorEventsPage({ params }: { params: { slug: str
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
+    <div className="mx-auto max-w-5xl px-4 py-6 animate-fade-in-up">
       <h1 className="mb-6 text-2xl font-extrabold text-gray-900">Events</h1>
 
       {upcoming.length === 0 && past.length === 0 && (

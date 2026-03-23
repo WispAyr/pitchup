@@ -103,14 +103,14 @@ export default function ContactPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md text-center">
-          <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Message Sent!</h1>
-          <p className="text-gray-500 mb-6">
+          <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4 animate-scale-in" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2 animate-fade-in-up animate-delay-1">Message Sent!</h1>
+          <p className="text-gray-500 mb-6 animate-fade-in-up animate-delay-2">
             Thanks for getting in touch. We&apos;ll get back to you as soon as we can.
           </p>
           <Link
             href={`/vendor/${slug}`}
-            className="inline-block rounded-xl px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
+            className="inline-block rounded-xl px-6 py-3 text-sm font-semibold text-white hover:opacity-90 animate-fade-in-up animate-delay-3"
             style={{ backgroundColor: primaryColor }}
           >
             Back to Home
@@ -169,6 +169,7 @@ export default function ContactPage() {
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">{error}</div>
         )}
 
+        <div key={activeTab} className="animate-fade-in-up">
         <form onSubmit={handleSubmit} className="space-y-4 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           {/* Common fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -177,7 +178,7 @@ export default function ContactPage() {
               <input
                 type="text" required value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-50"
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-50 invalid:border-red-300 invalid:ring-red-300"
                 style={{ '--tw-ring-color': primaryColor } as any}
               />
             </div>
@@ -186,7 +187,7 @@ export default function ContactPage() {
               <input
                 type="email" required value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-50"
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-opacity-50 invalid:border-red-300 invalid:ring-red-300"
                 style={{ '--tw-ring-color': primaryColor } as any}
               />
             </div>
@@ -361,6 +362,7 @@ export default function ContactPage() {
             {loading ? 'Sending...' : 'Send Message'}
           </button>
         </form>
+        </div>
 
         {/* Contact info */}
         {vendor && (vendor.phone || vendor.email) && (

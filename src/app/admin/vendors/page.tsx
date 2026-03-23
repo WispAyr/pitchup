@@ -10,11 +10,11 @@ export default async function AdminVendorsPage() {
   })
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <h1 className="mb-6 text-2xl font-bold text-white">Vendors</h1>
 
-      <div className="overflow-hidden rounded-xl border border-gray-800">
-        <table className="w-full">
+      <div className="overflow-x-auto rounded-xl border border-gray-800">
+        <table className="w-full min-w-[800px]">
           <thead className="bg-gray-900">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>

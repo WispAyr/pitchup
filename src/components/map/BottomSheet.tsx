@@ -131,7 +131,7 @@ export function BottomSheet({ location, vendor, onClose, onFollow, userLocation 
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         className={`
-          fixed z-40 bg-white shadow-2xl transition-all duration-300 ease-out
+          fixed z-40 bg-white shadow-2xl transition-all duration-300 ease-out animate-slide-up
           /* Mobile: bottom sheet */
           inset-x-0 bottom-0 rounded-t-2xl
           ${expanded ? 'max-h-[85vh]' : 'max-h-[55vh]'}

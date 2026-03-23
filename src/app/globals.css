@@ -53,7 +53,7 @@
     display: none;
   }
 
-  /* Skeleton shimmer animation */
+  /* ═══ Skeleton shimmer ═══ */
   @keyframes shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
@@ -64,8 +64,14 @@
     animation: shimmer 1.5s infinite;
     border-radius: 8px;
   }
+  .skeleton-dark {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
 
-  /* Pulsing live dot */
+  /* ═══ Pulsing live dot ═══ */
   @keyframes live-pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.5; transform: scale(1.5); }
@@ -73,13 +79,199 @@
   .live-dot {
     animation: live-pulse 2s ease-in-out infinite;
   }
+
+  /* ═══ Fade in up — staggered page content ═══ */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out both;
+  }
+  .animate-delay-1 { animation-delay: 0.1s; }
+  .animate-delay-2 { animation-delay: 0.2s; }
+  .animate-delay-3 { animation-delay: 0.3s; }
+  .animate-delay-4 { animation-delay: 0.4s; }
+  .animate-delay-5 { animation-delay: 0.5s; }
+
+  /* ═══ Fade in — simple ═══ */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out both;
+  }
+
+  /* ═══ Scale in — for modals, popovers ═══ */
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out both;
+  }
+
+  /* ═══ Slide in from right ═══ */
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out both;
+  }
+
+  /* ═══ Slide in from top — for toasts ═══ */
+  @keyframes slideInTop {
+    from { opacity: 0; transform: translateY(-100%); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-slide-in-top {
+    animation: slideInTop 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  /* ═══ Slide up — for bottom sheets and mobile menus ═══ */
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .animate-slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  /* ═══ Confetti burst ═══ */
+  @keyframes confettiFall {
+    0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+  .confetti-piece {
+    position: fixed;
+    top: -10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    animation: confettiFall 3s ease-in forwards;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ═══ Bounce add-to-cart ═══ */
+  @keyframes bounceAdd {
+    0%, 100% { transform: scale(1); }
+    30% { transform: scale(1.15); }
+    60% { transform: scale(0.95); }
+  }
+  .animate-bounce-add {
+    animation: bounceAdd 0.4s ease-out;
+  }
+
+  /* ═══ Pulse glow — KDS ready orders ═══ */
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+  }
+  .animate-pulse-glow-green {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlowBlue {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+  }
+  .animate-pulse-glow-blue {
+    animation: pulseGlowBlue 2s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlowAmber {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3); }
+    50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+  }
+  .animate-pulse-glow-amber {
+    animation: pulseGlowAmber 2s ease-in-out infinite;
+  }
+
+  /* ═══ Number count up ═══ */
+  @keyframes countUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-count-up {
+    animation: countUp 0.6s ease-out both;
+  }
+
+  /* ═══ Overdue timer flash ═══ */
+  @keyframes overdueFlash {
+    0%, 100% { color: #ef4444; }
+    50% { color: #fca5a5; }
+  }
+  .animate-overdue {
+    animation: overdueFlash 1s ease-in-out infinite;
+  }
 }
 
-/* Bottom sheet transition */
+/* ═══ Button & card interactive states ═══ */
+.btn-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.btn-hover:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ═══ Bottom sheet transition ═══ */
 .bottom-sheet-enter {
   transform: translateY(100%);
 }
 .bottom-sheet-enter-active {
   transform: translateY(0);
   transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ═══ Tab slide indicator ═══ */
+.tab-indicator {
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), width 0.25s ease;
+}
+
+/* ═══ Progress stepper ═══ */
+.step-connector {
+  transition: background-color 0.3s ease;
+}
+
+/* ═══ Focus visible ring ═══ */
+:focus-visible {
+  outline: 2px solid var(--vendor-primary, #F59E0B);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ═══ Toast notification ═══ */
+.toast-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast-container > * {
+  pointer-events: auto;
+}
+
+/* ═══ Header shrink on scroll ═══ */
+.header-shrink {
+  transition: padding 0.2s ease, height 0.2s ease;
 }

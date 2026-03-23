@@ -20,6 +20,12 @@ type MenuItemCardProps = {
   orderingEnabled: boolean
 }
 
+const DIETARY_LABELS: Record<string, string> = {
+  vegetarian: 'V',
+  vegan: 'VG',
+  'gluten-free': 'GF',
+}
+
 const DIETARY_COLORS: Record<string, { bg: string; text: string }> = {
   vegetarian: { bg: 'bg-green-100', text: 'text-green-800' },
   vegan: { bg: 'bg-green-100', text: 'text-green-800' },
@@ -38,10 +44,16 @@ export function MenuItemCard({ item, orderingEnabled }: MenuItemCardProps) {
       vendor.id,
       vendor.slug
     )
+    // Trigger bounce animation
+    const el = document.getElementById(`add-btn-${item.id}`)
+    if (el) {
+      el.classList.add('animate-bounce-add')
+      setTimeout(() => el.classList.remove('animate-bounce-add'), 400)
+    }
   }
 
   return (
-    <div className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm transition-shadow active:shadow-md">
+    <div className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm transition-shadow active:shadow-md card-hover">
       {/* Image */}
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
         {item.image ? (
@@ -74,7 +86,7 @@ export function MenuItemCard({ item, orderingEnabled }: MenuItemCardProps) {
                 const colors = DIETARY_COLORS[tag] || { bg: 'bg-gray-100', text: 'text-gray-700' }
                 return (
                   <span key={tag} className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${colors.bg} ${colors.text}`}>
-                    {tag}
+                    {DIETARY_LABELS[tag] || tag}
                   </span>
                 )
               })}
@@ -92,7 +104,7 @@ export function MenuItemCard({ item, orderingEnabled }: MenuItemCardProps) {
           {orderingEnabled && item.available && (
             <>
               {quantity > 0 ? (
-                <div className="flex items-center gap-1 rounded-full border border-gray-200">
+                <div id={`add-btn-${item.id}`} className="flex items-center gap-1 rounded-full border border-gray-200">
                   <button
                     onClick={() => cart.updateQuantity(item.id, quantity - 1)}
                     className="flex h-9 w-9 items-center justify-center rounded-full active:bg-gray-100"
@@ -112,6 +124,7 @@ export function MenuItemCard({ item, orderingEnabled }: MenuItemCardProps) {
                 </div>
               ) : (
                 <button
+                  id={`add-btn-${item.id}`}
                   onClick={handleAdd}
                   className="flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-bold text-white active:scale-95"
                   style={{ backgroundColor: vendor.primaryColor }}

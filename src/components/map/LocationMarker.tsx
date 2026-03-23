@@ -25,19 +25,15 @@ export function LocationMarker({ map, location, vendor, isSelected, onClick }: L
       <div class="marker-wrapper ${isLive ? 'marker-live' : ''} ${isSelected ? 'marker-selected' : ''}" style="--brand: ${vendor.primaryColor}">
         ${isLive ? '<div class="marker-pulse"></div>' : ''}
         <div class="marker-pin">
-          <svg width="32" height="40" viewBox="0 0 32 40" fill="none">
-            <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 24 16 24s16-12 16-24C32 7.163 24.837 0 16 0z" fill="${vendor.primaryColor}"/>
-            <circle cx="16" cy="15" r="7" fill="white" opacity="0.95"/>
-            ${isLive 
-              ? '<circle cx="16" cy="15" r="4" fill="#22c55e"/>' 
-              : `<circle cx="16" cy="15" r="3.5" fill="${vendor.primaryColor}"/>`
+          <svg width="36" height="44" viewBox="0 0 36 44" fill="none">
+            <path d="M18 0C8.059 0 0 8.059 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.059 27.941 0 18 0z" fill="${vendor.primaryColor}" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"/>
+            <circle cx="18" cy="17" r="9" fill="white" opacity="0.95"/>
+            ${isLive
+              ? '<text x="18" y="21" text-anchor="middle" font-size="13" fill="#22c55e">🚐</text>'
+              : `<text x="18" y="21" text-anchor="middle" font-size="12">${vendor.logo ? '📍' : '🚐'}</text>`
             }
           </svg>
         </div>
-        ${vendor.logo 
-          ? '' // Could add logo overlay later
-          : ''
-        }
       </div>
     `
 

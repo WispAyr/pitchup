@@ -14,11 +14,11 @@ export default async function AdminEnquiriesPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fade-in-up">
       <h1 className="mb-6 text-2xl font-bold text-white">All Enquiries</h1>
 
-      <div className="overflow-hidden rounded-xl border border-gray-800">
-        <table className="w-full">
+      <div className="overflow-x-auto rounded-xl border border-gray-800">
+        <table className="w-full min-w-[640px]">
           <thead className="bg-gray-900">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>

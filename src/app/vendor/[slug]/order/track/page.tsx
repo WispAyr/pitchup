@@ -74,8 +74,8 @@ export default function TrackOrderPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Track Your Order</h1>
+    <div className="mx-auto max-w-lg px-4 py-8 animate-fade-in-up">
+      <h1 className="mb-6 text-2xl font-extrabold text-gray-900">Track Your Order</h1>
 
       {/* Search */}
       <div className="mb-6">
@@ -133,7 +133,7 @@ export default function TrackOrderPage() {
           {!['cancelled', 'no-show'].includes(order.status) && (
             <div className="rounded-2xl border-2 border-dashed p-6 text-center" style={{ borderColor: vendor.primaryColor }}>
               <p className="text-sm text-gray-500 mb-1">Pickup Code</p>
-              <p className="text-4xl font-black tracking-wider" style={{ color: vendor.primaryColor }}>
+              <p className="text-5xl sm:text-6xl font-black tracking-wider animate-scale-in" style={{ color: vendor.primaryColor }}>
                 {order.pickupCode}
               </p>
               {order.timeSlotStart && order.timeSlotEnd && (
@@ -147,39 +147,44 @@ export default function TrackOrderPage() {
 
           {/* Progress steps */}
           {!['cancelled', 'no-show'].includes(order.status) && (
-            <div className="flex justify-between">
+            <div className="flex items-start justify-between">
               {STATUS_STEPS.map((step, i) => {
                 const isActive = i <= currentStepIndex
                 const isCurrent = i === currentStepIndex
                 const Icon = step.icon
                 return (
-                  <div key={step.key} className="flex flex-col items-center gap-1.5 flex-1">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-                        isCurrent
-                          ? 'text-white ring-4 ring-opacity-30'
-                          : isActive
-                          ? 'text-white'
-                          : 'bg-gray-100 text-gray-400'
-                      }`}
-                      style={
-                        isActive
-                          ? {
-                              backgroundColor: vendor.primaryColor,
-                              ...(isCurrent ? { ringColor: vendor.primaryColor } : {}),
-                            }
-                          : undefined
-                      }
-                    >
-                      <Icon className="h-5 w-5" />
+                  <div key={step.key} className="flex items-center flex-1 last:flex-none">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                          isCurrent
+                            ? 'text-white shadow-lg'
+                            : isActive
+                            ? 'text-white'
+                            : 'bg-gray-100 text-gray-400'
+                        } ${isCurrent && order?.status === 'ready' ? 'animate-pulse-glow-green' : ''}`}
+                        style={
+                          isActive
+                            ? { backgroundColor: vendor.primaryColor }
+                            : undefined
+                        }
+                      >
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span
+                        className={`text-xs font-medium ${
+                          isActive ? 'text-gray-900' : 'text-gray-400'
+                        }`}
+                      >
+                        {step.label}
+                      </span>
                     </div>
-                    <span
-                      className={`text-xs font-medium ${
-                        isActive ? 'text-gray-900' : 'text-gray-400'
-                      }`}
-                    >
-                      {step.label}
-                    </span>
+                    {i < STATUS_STEPS.length - 1 && (
+                      <div
+                        className="mx-1 mt-[-12px] h-0.5 flex-1 rounded step-connector"
+                        style={{ backgroundColor: i < currentStepIndex ? vendor.primaryColor : '#e5e7eb' }}
+                      />
+                    )}
                   </div>
                 )
               })}

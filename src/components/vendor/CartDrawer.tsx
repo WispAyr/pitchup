@@ -29,10 +29,27 @@ export function CartDrawer() {
 
   return (
     <>
-      {/* Floating cart button — above sticky bottom bar */}
+      {/* Floating cart summary bar — mobile */}
+      <div className="fixed inset-x-0 bottom-16 z-30 px-4 md:hidden animate-slide-up">
+        <button
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center justify-between rounded-2xl px-5 py-3.5 text-white shadow-xl active:scale-[0.98] transition-transform"
+          style={{ backgroundColor: vendor.primaryColor }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs font-extrabold">
+              {count}
+            </div>
+            <span className="text-sm font-bold">View Order</span>
+          </div>
+          <span className="text-base font-extrabold">{formatPrice(cart.total())}</span>
+        </button>
+      </div>
+
+      {/* Floating cart button — desktop */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-30 flex items-center gap-2 rounded-full px-5 py-3 text-white shadow-xl active:scale-95 md:bottom-6 md:right-6"
+        className="fixed bottom-6 right-6 z-30 hidden items-center gap-2 rounded-full px-5 py-3 text-white shadow-xl active:scale-95 md:flex btn-hover"
         style={{ backgroundColor: vendor.primaryColor }}
       >
         <ShoppingCart className="h-5 w-5" />

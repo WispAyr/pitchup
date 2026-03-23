@@ -111,7 +111,7 @@ export default function AdminDashboardClient({ data }: { data: DashboardData }) 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
+      <div className="animate-fade-in-up">
         <h1 className="text-2xl font-extrabold text-gray-900">Welcome back, {vendor.name}</h1>
         <p className="mt-1 text-gray-500">Here&apos;s what&apos;s happening today.</p>
       </div>
@@ -193,7 +193,7 @@ export default function AdminDashboardClient({ data }: { data: DashboardData }) 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard icon={ShoppingBag} label="Orders" today={metrics.ordersToday} week={metrics.ordersWeek} month={metrics.ordersMonth} color={color} />
         <MetricCard icon={PoundSterling} label="Revenue" today={metrics.revenueToday} week={metrics.revenueWeek} month={metrics.revenueMonth} color={color} isMoney />
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm animate-fade-in-up card-hover">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="h-4 w-4 text-gray-400" />
             <span className="text-xs text-gray-500">Avg Order</span>
@@ -201,7 +201,7 @@ export default function AdminDashboardClient({ data }: { data: DashboardData }) 
           <p className="text-xl font-bold" style={{ color }}>{formatPrice(metrics.avgOrderValue)}</p>
           <p className="text-xs text-gray-400">This month</p>
         </div>
-        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm animate-fade-in-up card-hover">
           <div className="flex items-center gap-2 mb-1">
             <Package className="h-4 w-4 text-gray-400" />
             <span className="text-xs text-gray-500">Pre-Orders</span>
@@ -320,7 +320,7 @@ export default function AdminDashboardClient({ data }: { data: DashboardData }) 
       </div>
 
       {/* Recent Activity Feed */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm animate-fade-in">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-gray-400" />
@@ -374,7 +374,7 @@ function MetricCard({ icon: Icon, label, today, week, month, color, isMoney }: {
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today')
   const val = period === 'today' ? today : period === 'week' ? week : month
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm animate-fade-in-up card-hover">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-gray-400" />
@@ -400,7 +400,7 @@ function ActionCard({ icon: Icon, title, color, count, link, linkText, warn, chi
   icon: any; title: string; color: string; count: number; link: string; linkText: string; warn?: boolean; children: React.ReactNode
 }) {
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${warn ? 'border-orange-200 bg-orange-50/50' : 'border-gray-100 bg-white'}`}>
+    <div className={`rounded-2xl border p-4 shadow-sm animate-fade-in-up card-hover ${warn ? 'border-orange-200 bg-orange-50/50' : 'border-gray-100 bg-white'}`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4" style={{ color: warn ? '#ea580c' : color }} />
@@ -421,7 +421,7 @@ function QuickAction({ href, icon: Icon, label, color, primary }: {
 }) {
   return (
     <Link href={href}
-      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 ${
+      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 btn-hover ${
         primary ? 'text-white' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
       }`}
       style={primary ? { backgroundColor: color } : undefined}

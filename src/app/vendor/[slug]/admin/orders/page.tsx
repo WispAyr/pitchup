@@ -33,6 +33,37 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 const ACTIVE_STATUSES = ['confirmed', 'preparing', 'ready']
 
+const GLOW_CLASS: Record<string, string> = {
+  confirmed: 'animate-pulse-glow-blue',
+  preparing: 'animate-pulse-glow-amber',
+  ready: 'animate-pulse-glow-green',
+}
+
+function ElapsedTimer({ since, overdue }: { since: string; overdue?: number }) {
+  const [elapsed, setElapsed] = useState('')
+  const [isOverdue, setIsOverdue] = useState(false)
+
+  useEffect(() => {
+    const update = () => {
+      const diff = Math.floor((Date.now() - new Date(since).getTime()) / 1000)
+      const mins = Math.floor(diff / 60)
+      const secs = diff % 60
+      setElapsed(`${mins}:${secs.toString().padStart(2, '0')}`)
+      if (overdue && mins >= overdue) setIsOverdue(true)
+      else setIsOverdue(false)
+    }
+    update()
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [since, overdue])
+
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-mono font-bold ${isOverdue ? 'animate-overdue' : 'text-gray-500'}`}>
+      ⏱ {elapsed}
+    </span>
+  )
+}
+
 export default function AdminOrdersPage({ params }: { params: { slug: string } }) {
   const { data: session } = useSession()
   const [orders, setOrders] = useState<Order[]>([])
@@ -93,46 +124,60 @@ export default function AdminOrdersPage({ params }: { params: { slug: string } }
   // Pickup screen modal
   if (showPickupScreen) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-gray-900 text-white">
-        <div className="flex items-center justify-between p-4">
-          <h1 className="text-xl font-bold">Pickup Screen</h1>
+      <div className="fixed inset-0 z-50 flex flex-col bg-black text-white">
+        <div className="flex items-center justify-between border-b border-white/10 p-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold">Pickup Screen</h1>
+            <div className="flex items-center gap-3 text-sm">
+              <span className="rounded-full bg-amber-500/20 px-3 py-1 font-bold text-amber-400">
+                {preparingOrders.length} preparing
+              </span>
+              <span className="rounded-full bg-green-500/20 px-3 py-1 font-bold text-green-400">
+                {readyOrders.length} ready
+              </span>
+            </div>
+          </div>
           <button
             onClick={() => setShowPickupScreen(false)}
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
+            className="rounded-lg bg-white/10 px-4 py-2 text-sm font-bold hover:bg-white/20 transition-colors"
           >
             Exit
           </button>
         </div>
 
-        <div className="flex flex-1 gap-6 p-6">
+        <div className="flex flex-1 gap-1 p-4">
           {/* Preparing column */}
-          <div className="flex-1">
-            <h2 className="mb-4 text-center text-2xl font-bold text-amber-400">Preparing</h2>
+          <div className="flex-1 rounded-2xl bg-amber-500/5 p-4">
+            <h2 className="mb-4 text-center text-2xl font-extrabold text-amber-400">
+              🔥 Preparing
+            </h2>
             <div className="space-y-3">
               {preparingOrders.map((o) => (
-                <div key={o.id} className="rounded-xl bg-amber-500/20 p-4 text-center">
-                  <p className="text-3xl font-black tracking-wider">{o.pickupCode}</p>
-                  <p className="text-sm text-amber-200 mt-1">{o.customerName}</p>
+                <div key={o.id} className="rounded-2xl bg-amber-500/15 p-5 text-center animate-pulse-glow-amber">
+                  <p className="text-5xl sm:text-6xl font-black tracking-wider">{o.pickupCode}</p>
+                  <p className="mt-2 text-sm text-amber-200">{o.customerName}</p>
                 </div>
               ))}
               {preparingOrders.length === 0 && (
-                <p className="text-center text-gray-500">No orders preparing</p>
+                <p className="py-8 text-center text-gray-600">No orders preparing</p>
               )}
             </div>
           </div>
 
           {/* Ready column */}
-          <div className="flex-1">
-            <h2 className="mb-4 text-center text-2xl font-bold text-green-400">Ready for Collection</h2>
+          <div className="flex-1 rounded-2xl bg-green-500/5 p-4">
+            <h2 className="mb-4 text-center text-2xl font-extrabold text-green-400">
+              ✅ Ready for Collection
+            </h2>
             <div className="space-y-3">
               {readyOrders.map((o) => (
-                <div key={o.id} className="rounded-xl bg-green-500/20 p-4 text-center animate-pulse">
-                  <p className="text-4xl font-black tracking-wider">{o.pickupCode}</p>
-                  <p className="text-sm text-green-200 mt-1">{o.customerName}</p>
+                <div key={o.id} className="rounded-2xl bg-green-500/15 p-5 text-center animate-pulse-glow-green">
+                  <p className="text-6xl sm:text-7xl font-black tracking-wider">{o.pickupCode}</p>
+                  <p className="mt-2 text-sm text-green-200">{o.customerName}</p>
                 </div>
               ))}
               {readyOrders.length === 0 && (
-                <p className="text-center text-gray-500">No orders ready</p>
+                <p className="py-8 text-center text-gray-600">No orders ready</p>
               )}
             </div>
           </div>
@@ -147,9 +192,14 @@ export default function AdminOrdersPage({ params }: { params: { slug: string } }
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
-          <p className="text-sm text-gray-500">
-            {orders.filter((o) => ACTIVE_STATUSES.includes(o.status)).length} active orders
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-0.5 text-xs font-bold text-blue-700">
+              {orders.filter((o) => ACTIVE_STATUSES.includes(o.status)).length} active
+            </span>
+            <span className="text-xs text-gray-400">
+              {orders.length} total
+            </span>
+          </div>
         </div>
         <button
           onClick={() => setShowPickupScreen(true)}
@@ -187,12 +237,17 @@ export default function AdminOrdersPage({ params }: { params: { slug: string } }
         </div>
       ) : (
         <div className="mt-4 space-y-3">
-          {filteredOrders.map((order) => {
+          {filteredOrders.map((order, i) => {
             const config = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending
             const Icon = config.icon
+            const glowClass = GLOW_CLASS[order.status] || ''
 
             return (
-              <div key={order.id} className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div
+                key={order.id}
+                className={`animate-fade-in-up rounded-xl border border-gray-100 bg-white p-4 shadow-sm ${glowClass}`}
+                style={{ animationDelay: `${Math.min(i * 0.05, 0.5)}s` }}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     {/* Pickup code */}
@@ -209,9 +264,14 @@ export default function AdminOrdersPage({ params }: { params: { slug: string } }
                     </div>
                   </div>
 
-                  <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${config.bg} ${config.color}`}>
-                    <Icon className="h-3.5 w-3.5" />
-                    {config.label}
+                  <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${config.bg} ${config.color}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                      {config.label}
+                    </div>
+                    {ACTIVE_STATUSES.includes(order.status) && (
+                      <ElapsedTimer since={order.createdAt} overdue={15} />
+                    )}
                   </div>
                 </div>
 

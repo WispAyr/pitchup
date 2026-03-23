@@ -73,13 +73,13 @@ export default async function VendorHomePage({
       {/* ═══ Hero ═══ */}
       <section className="relative overflow-hidden">
         {vendor.banner ? (
-          <div className="relative h-48 sm:h-64 lg:h-80">
+          <div className="relative h-56 sm:h-64 lg:h-80">
             <img src={vendor.banner} alt={vendor.name} className="h-full w-full object-cover" loading="eager" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </div>
         ) : (
           <div
-            className="relative h-48 sm:h-64 lg:h-80"
+            className="relative h-56 sm:h-64 lg:h-80"
             style={{ background: `linear-gradient(135deg, ${vendor.primaryColor}, ${vendor.secondaryColor})` }}
           >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.1),_transparent_60%)]" />
@@ -89,10 +89,10 @@ export default async function VendorHomePage({
         {/* Hero content — overlaid at bottom */}
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-5">
           <div className="mx-auto max-w-5xl">
-            <h1 className="text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl drop-shadow-sm">
+            <h1 className="text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl drop-shadow-sm animate-fade-in-up animate-delay-1">
               {vendor.name}
             </h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2 animate-fade-in-up animate-delay-3">
               {vendor.cuisineType && (
                 <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
                   {vendor.cuisineType}
@@ -111,8 +111,23 @@ export default async function VendorHomePage({
               )}
             </div>
             {vendor.description && (
-              <p className="mt-2 max-w-xl text-sm text-white/90 line-clamp-2">{vendor.description}</p>
+              <p className="mt-2 max-w-xl text-sm text-white/90 line-clamp-2 animate-fade-in-up animate-delay-2">{vendor.description}</p>
             )}
+            <div className="mt-4 flex gap-3 animate-fade-in-up animate-delay-4">
+              <Link
+                href="/menu"
+                className="flex h-12 items-center gap-2 rounded-2xl px-6 text-sm font-bold text-white shadow-lg btn-hover"
+                style={{ backgroundColor: vendor.primaryColor }}
+              >
+                🍔 Order Now
+              </Link>
+              <Link
+                href="/schedule"
+                className="flex h-12 items-center gap-2 rounded-2xl bg-white/20 px-6 text-sm font-bold text-white backdrop-blur-sm btn-hover"
+              >
+                📍 Find Us
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -210,7 +225,7 @@ export default async function VendorHomePage({
 
         {/* ═══ Menu Preview ═══ */}
         {vendor.menuItems.length > 0 && (
-          <section>
+          <section className="animate-fade-in-up">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-extrabold text-gray-900">Our Menu</h2>
               <Link href="/menu" className="flex items-center gap-1 text-sm font-bold" style={{ color: vendor.primaryColor }}>
@@ -221,7 +236,7 @@ export default async function VendorHomePage({
               {vendor.menuItems.map((item) => (
                 <div
                   key={item.id}
-                  className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
+                  className="flex gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm card-hover"
                 >
                   <div
                     className="h-20 w-20 shrink-0 overflow-hidden rounded-xl"
@@ -254,7 +269,7 @@ export default async function VendorHomePage({
 
         {/* ═══ Today's Schedule ═══ */}
         {todaySchedules.length > 0 && (
-          <section>
+          <section className="animate-fade-in-up animate-delay-1">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-extrabold text-gray-900">Today</h2>
               <Link href="/schedule" className="flex items-center gap-1 text-sm font-bold" style={{ color: vendor.primaryColor }}>
@@ -299,7 +314,7 @@ export default async function VendorHomePage({
 
         {/* ═══ Upcoming Events ═══ */}
         {vendor.events.length > 0 && (
-          <section>
+          <section className="animate-fade-in-up animate-delay-2">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-extrabold text-gray-900">📅 Upcoming Events</h2>
               <Link href="/events" className="flex items-center gap-1 text-sm font-bold" style={{ color: vendor.primaryColor }}>
@@ -351,7 +366,30 @@ export default async function VendorHomePage({
         )}
 
         {/* ═══ Follow & Social ═══ */}
-        <VendorHomeClient />
+        <div className="animate-fade-in-up animate-delay-3">
+          <VendorHomeClient />
+        </div>
+
+        {/* ═══ Social Proof ═══ */}
+        {vendor._count.reviews > 0 && (
+          <section className="animate-fade-in-up animate-delay-3">
+            <div className="flex items-center justify-center gap-6 rounded-2xl bg-gray-50 px-5 py-4 text-center">
+              <div>
+                <p className="text-2xl font-extrabold text-gray-900">{vendor._count.reviews}</p>
+                <p className="text-xs text-gray-500">Reviews</p>
+              </div>
+              {avgRating?._avg?.rating && (
+                <>
+                  <div className="h-8 w-px bg-gray-200" />
+                  <div>
+                    <p className="text-2xl font-extrabold text-gray-900">{avgRating._avg.rating.toFixed(1)}</p>
+                    <p className="text-xs text-gray-500">Rating</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* ═══ Sticky bottom CTA — mobile only ═══ */}

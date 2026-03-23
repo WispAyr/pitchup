@@ -48,7 +48,7 @@ export function VendorLayoutClient({ preOrderingEnabled, primaryColor }: Props) 
         {preOrderingEnabled && (
           <Link
             href="/order"
-            className="ml-2 rounded-full px-5 py-2 text-sm font-bold text-white transition-all active:scale-95"
+            className="ml-2 rounded-full px-5 py-2 text-sm font-bold text-white transition-all active:scale-95 btn-hover"
             style={{ backgroundColor: primaryColor }}
           >
             Pre-Order
@@ -69,7 +69,7 @@ export function VendorLayoutClient({ preOrderingEnabled, primaryColor }: Props) 
       {open && (
         <>
           <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />
-          <div className="fixed inset-x-0 top-[52px] z-50 bg-white shadow-xl md:hidden">
+          <div className="fixed inset-x-0 top-[52px] z-50 bg-white shadow-xl md:hidden animate-slide-up">
             <nav className="flex flex-col px-4 py-3 gap-0.5">
               {navLinks.map((link) => (
                 <Link

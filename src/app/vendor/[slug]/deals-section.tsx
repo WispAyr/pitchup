@@ -27,7 +27,7 @@ export function DealsSection({ vendorSlug, primaryColor }: { vendorSlug: string;
   const rest = deals.filter(d => !d.isFeatured).slice(0, 2)
 
   return (
-    <section>
+    <section className="animate-fade-in-up">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-xl font-extrabold text-gray-900">
           <Flame className="h-5 w-5" style={{ color: primaryColor }} />
@@ -61,7 +61,7 @@ export function DealsSection({ vendorSlug, primaryColor }: { vendorSlug: string;
 
         {rest.map(deal => (
           <Link key={deal.id} href="/deals"
-            className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white p-4 shadow-sm card-hover">
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-gray-900">{deal.title}</h3>
               <p className="text-sm text-gray-500 line-clamp-1">{deal.description}</p>

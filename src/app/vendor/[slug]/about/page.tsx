@@ -38,8 +38,8 @@ export default async function AboutPage({
   }))
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900 sm:text-3xl">About {vendor.name}</h1>
+    <div className="mx-auto max-w-3xl px-4 py-6 animate-fade-in-up">
+      <h1 className="mb-6 text-2xl font-extrabold text-gray-900 sm:text-3xl">About {vendor.name}</h1>
 
       {/* Description */}
       {vendor.description && (

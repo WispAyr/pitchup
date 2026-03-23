@@ -107,8 +107,8 @@ export default function AdminSidebar() {
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-40 flex h-full w-64 flex-col border-r border-gray-800 bg-gray-900 transition-transform lg:static lg:translate-x-0 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed left-0 top-0 z-40 flex h-full w-64 flex-col border-r border-gray-800 bg-[#0F172A] transition-transform lg:static lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0 animate-slide-in-right' : '-translate-x-full'
         }`}
       >
         {nav}
